@@ -1,0 +1,1 @@
+{'arena_height': 50.0, 'arena_width': 50.0, 'width_div': 16.666666666666668, 'arena_pic_name': '/home/pi/Desktop/TEST SYSTEM v7/example_reference_image.png', 'height_div': 16.666666666666668}
