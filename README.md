@@ -4,4 +4,4 @@ Open source, user modifiable system capable of tracking rodent movement and a ra
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-This project is licensed under the terms of the GNU General Public license v3.0
+This project is licensed under the terms of the GNU General Public License v3.0
