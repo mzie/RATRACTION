@@ -968,10 +968,10 @@ class Window(Qt.QWidget):
 
         vidTrack_results = {}
         try:
-            if vidTrack_setup_parameters != None:
+            if (vidTrack_setup_parameters['video_tracking_algorithm'] == "Frame Differencing") or (vidTrack_setup_parameters['video_tracking_algorithm'] == "MOG") :
                 vidTrack_results['vid_time'] = trck[0]
                 vidTrack_results['position'] = trck[1]
-            elif vidTrack_setup_parameters == None:
+            elif vidTrack_setup_parameters['video_tracking_algorithm'] == "None":
                 vidTrack_results['vid_time'] = trck
         except:
             pass

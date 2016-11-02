@@ -44,9 +44,9 @@ class ButtonLineEdit(Qt.QLineEdit):
         super(ButtonLineEdit, self).resizeEvent(event)
 
 class CameraWizard(Qt.QWizard):
-    NUM_PAGES = 3
+    NUM_PAGES = 4
 
-    (PageTrackingMethods, PageCalibration1, PageCalibration2) = range(NUM_PAGES)
+    (PageTrackingMethods, PageCalibration0, PageCalibration1, PageCalibration2) = range(NUM_PAGES)
 
     def __init__(self, cam, vid_name, vidTrack_sp, parent=None):
         super(CameraWizard, self).__init__(parent)
@@ -58,6 +58,7 @@ class CameraWizard(Qt.QWizard):
         self.vid_name = vid_name
 
         self.setPage(self.PageTrackingMethods, TrackingMethodsPage(self))
+        self.setPage(self.PageCalibration0, CalibrationPage0())
         self.setPage(self.PageCalibration1, CalibrationPage1(cam, vid_name))
         self.setPage(self.PageCalibration2, CalibrationPage2(cam, vid_name))
 
@@ -80,13 +81,15 @@ class TrackingMethodsPage(Qt.QWizardPage):
 
         self.cmBox1 = Qt.QComboBox()
 
-        tracking_algorithms = ["Tracking algorithm using frame differencing", "Tracking algorithm using MOG"]
+        tracking_algorithms = ["No tracking algorithm", "Tracking algorithm using frame differencing", "Tracking algorithm using MOG"]
 
         self.tracking_algorithms_description = {"Tracking algorithm using frame differencing":"Tracking algorithm using frame differencing. Faster and more accurate but requires a reference image of the arena without the animal in it."
                 "Will mistakenly track objects which are the same colour as the animal being tracked that have moved since the time the reference image was taken.",
                                             "Tracking algorithm using MOG":"Tracking algorithm using MOG. Slower and less accurate than the frame differencing algorithm but doesn't require a reference image"
                                "of the arena without the animal in it. Therefore this algorithm can be used applied to videos for which an appropriate reference image"
-                               "can't be taken. Can account for the movement of objects inside the arena."}
+                               "can't be taken. Can account for the movement of objects inside the arena.", "No tracking algorithm":"No tracking algorithm will be applied to the live camera/video feed. This option should be used when "
+                                "the animal is to be remotely observed and its behaviour manually recorded. Without the additional processing requried for the tracking algorithms, the live camera feed will have a higher framerate and the "
+                                    "video feed will run faster."}
         
         self.cmBox1.addItems(tracking_algorithms)
         self.cmBox1.currentIndexChanged.connect(self.selection_change)
@@ -97,10 +100,12 @@ class TrackingMethodsPage(Qt.QWizardPage):
         self.txtEdt1.setText(self.tracking_algorithms_description[tracking_algorithms[0]])
         
         try:
-            if vidTrack_setup_parameters["video_tracking_algorithm"] == "Frame Differencing":
+            if vidTrack_setup_parameters["video_tracking_algorithm"] == "None":
                 self.cmBox1.setCurrentIndex(0)
-            elif vidTrack_setup_parameters["video_tracking_algorithm"] == "MOG":
+            elif vidTrack_setup_parameters["video_tracking_algorithm"] == "Frame Differencing":
                 self.cmBox1.setCurrentIndex(1)
+            elif vidTrack_setup_parameters["video_tracking_algorithm"] == "MOG":
+                self.cmBox1.setCurrentIndex(2)
         except:
             pass
 
@@ -112,7 +117,13 @@ class TrackingMethodsPage(Qt.QWizardPage):
         
     def nextId(self):
         global vidTrack_setup_parameters
-        if self.cmBox1.currentText() == "Tracking algorithm using frame differencing":
+        if self.cmBox1.currentText() == "No tracking algorithm":
+            try:
+                vidTrack_setup_parameters["video_tracking_algorithm"] = "None"
+            except:
+                vidTrack_setup_parameters = {"video_tracking_algorithm":"None"}
+            return CameraWizard.PageCalibration0
+        elif self.cmBox1.currentText() == "Tracking algorithm using frame differencing":
             try:
                 vidTrack_setup_parameters["video_tracking_algorithm"] = "Frame Differencing"
             except:
@@ -127,7 +138,34 @@ class TrackingMethodsPage(Qt.QWizardPage):
         
     def selection_change(self):
         self.txtEdt1.setText(self.tracking_algorithms_description[self.cmBox1.currentText()])
-                     
+
+
+class CalibrationPage0(Qt.QWizardPage):
+
+    def __init__(self, parent=None):
+        super(CalibrationPage0, self).__init__(parent)
+
+        global vidTrack_setup_parameters
+
+        self.setTitle(self.tr("Calibrate the video tracking method!"))
+        self.setSubTitle(self.tr("No calibration is requried as no tracking algorithm has been applied"))
+    
+        self.pshBtn4 = Qt.QPushButton(self.tr("Finalise Calibration"))
+        self.pshBtn4.clicked.connect(self.finalise_calibration)
+
+        layout1 = Qt.QVBoxLayout(self)
+        layout1.addStretch(0)
+        layout1.addWidget(self.pshBtn4)
+        layout1.addStretch(0)
+
+    def nextId(self):
+        return -1
+
+    def finalise_calibration(self):
+        global vidTrack_setup_parameters
+        print("new video tracking method: %s" %(vidTrack_setup_parameters))
+
+                   
 class CalibrationPage1(Qt.QWizardPage):
         
     def __init__(self, cam, vid_name, parent=None):
