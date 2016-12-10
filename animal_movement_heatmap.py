@@ -17,11 +17,11 @@ class Window(Qt.QWidget):
         for key in global_results.keys():
             self.cmBox1.addItem(str(key))
 
-        lbl1 = Qt.QLabel("Arena Width (cm):")
+        lbl1 = Qt.QLabel("Arena width (cm):")
         self.lneEdt1 = Qt.QLineEdit()
         lbl1.setBuddy(self.lneEdt1)
 
-        lbl2 = Qt.QLabel("Arena Height (cm):")
+        lbl2 = Qt.QLabel("Arena height (cm):")
         self.lneEdt2 = Qt.QLineEdit()
         lbl2.setBuddy(self.lneEdt2)
 
@@ -76,7 +76,7 @@ class Window(Qt.QWidget):
         self.width_div = self.arena_width/self.num_width_divs
         self.height_div = self.arena_height/self.num_height_divs
         
-        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_time']]
+        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_pts_time']]
         try:
             pos = [eval(posi) for posi in global_results[str(self.cmBox1.currentText())]["results"]['position']]
         except:

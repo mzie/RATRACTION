@@ -125,20 +125,23 @@ class Results(Qt.QDialog):
             #print("Error! Can't display current variable or can't change to other variables")
 
     def export_trial(self):
-        name = Qt.QFileDialog.getSaveFileName(self, 'Export Trial Results') 
-        with open(name, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(["Date", self.lneEdt1.text()])
-            writer.writerow(["Start_Time", self.lneEdt2.text()])
-            writer.writerow(["End_Time", self.lneEdt3.text()])
-            writer.writerow(["Trial_Duration", self.lneEdt4.text()])
-            writer.writerow(["Comments", self.txtEdt1.toPlainText()])
-            for key in global_results[self.cmBox1.currentText()]["results"].keys():
-                temp_list = [key]
-                for i in global_results[self.cmBox1.currentText()]["results"][key]:
-                    temp_list.append(i)
-                writer.writerow(temp_list)
-        print("exported result: %s" %(name))
+        try:
+            name = Qt.QFileDialog.getSaveFileName(self, 'Export Trial Results') 
+            with open(name, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Date", self.lneEdt1.text()])
+                writer.writerow(["Start_Time", self.lneEdt2.text()])
+                writer.writerow(["End_Time", self.lneEdt3.text()])
+                writer.writerow(["Trial_Duration", self.lneEdt4.text()])
+                writer.writerow(["Comments", self.txtEdt1.toPlainText()])
+                for key in global_results[self.cmBox1.currentText()]["results"].keys():
+                    temp_list = [key]
+                    for i in global_results[self.cmBox1.currentText()]["results"][key]:
+                        temp_list.append(i)
+                    writer.writerow(temp_list)
+            print("exported result: %s" %(name))
+        except:
+            pass
 
                 
 # main ===============================================               

@@ -47,7 +47,7 @@ class Window(Qt.QWidget):
         exec('self.%s()' %(self.cmBox2.currentText()))
 
     def Linear_Distance_Travelled(self):
-        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_time']]
+        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_pts_time']]
         try:
             pos = [eval(posi) for posi in global_results[str(self.cmBox1.currentText())]["results"]['position']]
         except:
@@ -66,7 +66,7 @@ class Window(Qt.QWidget):
         plt.show()
 
     def Total_Distance_Travelled(self):
-        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_time']]
+        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_pts_time']]
         try:
             pos = [eval(posi) for posi in global_results[str(self.cmBox1.currentText())]["results"]['position']]
         except:
@@ -90,7 +90,7 @@ class Window(Qt.QWidget):
         plt.show()
 
     def Horizontal_Distance_Travelled(self):
-        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_time']]
+        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_pts_time']]
         try:
             pos = [eval(posi) for posi in global_results[str(self.cmBox1.currentText())]["results"]['position']]
         except:
@@ -108,7 +108,7 @@ class Window(Qt.QWidget):
         plt.show()
 
     def Vertical_Distance_Travelled(self):
-        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_time']]
+        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_pts_time']]
         try:
             pos = [eval(posi) for posi in global_results[str(self.cmBox1.currentText())]["results"]['position']]
         except:
@@ -166,7 +166,7 @@ class Window(Qt.QWidget):
 ##        plt.show()
 
     def Average_Velocity(self):
-        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_time']]
+        time = [float(tim) for tim in global_results[str(self.cmBox1.currentText())]["results"]['vid_pts_time']]
         try:
             pos = [eval(posi) for posi in global_results[str(self.cmBox1.currentText())]["results"]['position']]
         except:

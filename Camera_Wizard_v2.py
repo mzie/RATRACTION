@@ -13,6 +13,7 @@ import cv2
 import time
 import numpy as np
 import sys
+import os
 from vid_tracking_methods import (live_pixels_to_cm, vid_pixels_to_cm,
                                   live_capture_ref_image, vid_capture_ref_image,
                                   live_colour_calib, vid_colour_calib)
@@ -43,10 +44,11 @@ class ButtonLineEdit(Qt.QLineEdit):
                          (self.rect().bottom() - buttonSize.height() + 1)/2)
         super(ButtonLineEdit, self).resizeEvent(event)
 
-class CameraWizard(Qt.QWizard):
-    NUM_PAGES = 4
 
-    (PageTrackingMethods, PageCalibration0, PageCalibration1, PageCalibration2) = range(NUM_PAGES)
+class CameraWizard(Qt.QWizard):
+    NUM_PAGES = 7
+
+    (PageVideoAspectRatio, PageTrackingMethods, PageCalibration0, PageCalibration1, PageCalibration2, PageSimplifications1, PageSimplifications2) = range(NUM_PAGES)
 
     def __init__(self, cam, vid_name, vidTrack_sp, parent=None):
         super(CameraWizard, self).__init__(parent)
@@ -57,12 +59,18 @@ class CameraWizard(Qt.QWizard):
         self.cam = cam
         self.vid_name = vid_name
 
-        self.setPage(self.PageTrackingMethods, TrackingMethodsPage(self))
-        self.setPage(self.PageCalibration0, CalibrationPage0())
+        self.setPage(self.PageVideoAspectRatio, VideoAspectRatioPage(cam, vid_name))
+        self.setPage(self.PageTrackingMethods, TrackingMethodsPage())
+        self.setPage(self.PageCalibration0, CalibrationPage0(cam, vid_name))
         self.setPage(self.PageCalibration1, CalibrationPage1(cam, vid_name))
         self.setPage(self.PageCalibration2, CalibrationPage2(cam, vid_name))
+        self.setPage(self.PageSimplifications1, SimplificationsPage1())
+        self.setPage(self.PageSimplifications2, SimplificationsPage2())
 
-        self.setStartId(self.PageTrackingMethods)
+        if self.vid_name != None:
+            self.setStartId(self.PageVideoAspectRatio)
+        else:
+            self.setStartId(self.PageTrackingMethods)
 
         # images won't show in Windows 7 if style not set
         self.setWizardStyle(self.ClassicStyle)
@@ -70,6 +78,45 @@ class CameraWizard(Qt.QWizard):
 
         self.setWindowTitle(self.tr("Video Tracking Setup Wizard"))
 
+
+class VideoAspectRatioPage(Qt.QWizardPage):
+
+    def __init__(self, cam, vid_name, parent=None):
+        super(VideoAspectRatioPage, self).__init__(parent)
+
+        global vidTrack_setup_parameters
+
+        self.cam = cam
+        self.vid_name = vid_name
+
+        self.setTitle(self.tr("Calibrate the video tracking method!"))
+        self.setSubTitle(self.tr("Specify the aspect ratio of the loaded video"))
+
+        lbl1 = Qt.QLabel(self.tr("Loaded video aspect ratio (width:height)"))
+        self.lneEdt1 = Qt.QLineEdit()
+        lbl1.setBuddy(self.lneEdt1)
+        try:
+            self.lneEdt1.setText(vidTrack_setup_parameters['loaded_video_aspect_ratio'])
+        except:
+            pass
+
+        layout1 = Qt.QFormLayout()
+        layout1.addRow(lbl1, self.lneEdt1)
+
+        layout2 = Qt.QVBoxLayout(self)
+        layout2.addStretch(1)
+        layout2.addLayout(layout1)
+        layout2.addStretch(1)
+
+    def nextId(self):
+        global vidTrack_setup_parameters
+        try:
+            vidTrack_setup_parameters["loaded_video_aspect_ratio"] = self.lneEdt1.text()
+        except:
+            vidTrack_setup_parameters = {"loaded_video_aspect_ratio":self.lneEdt1.text()}
+        return CameraWizard.PageTrackingMethods
+
+           
 class TrackingMethodsPage(Qt.QWizardPage):
       
     def __init__(self, parent=None):
@@ -77,7 +124,7 @@ class TrackingMethodsPage(Qt.QWizardPage):
 
         global vidTrack_setup_parameters
 
-        self.setTitle(self.tr("Locomotion Tracking Methods"))
+        self.setTitle(self.tr("Choose the video tracking algorithm to be used"))
 
         self.cmBox1 = Qt.QComboBox()
 
@@ -142,15 +189,18 @@ class TrackingMethodsPage(Qt.QWizardPage):
 
 class CalibrationPage0(Qt.QWizardPage):
 
-    def __init__(self, parent=None):
+    def __init__(self, cam, vid_name, parent=None):
         super(CalibrationPage0, self).__init__(parent)
 
         global vidTrack_setup_parameters
 
+        self.cam = cam
+        self.vid_name = vid_name
+
         self.setTitle(self.tr("Calibrate the video tracking method!"))
         self.setSubTitle(self.tr("No calibration is requried as no tracking algorithm has been applied"))
     
-        self.pshBtn4 = Qt.QPushButton(self.tr("Finalise Calibration"))
+        self.pshBtn4 = Qt.QPushButton(self.tr("FINALISE CALIBRATION"))
         self.pshBtn4.clicked.connect(self.finalise_calibration)
 
         layout1 = Qt.QVBoxLayout(self)
@@ -163,7 +213,15 @@ class CalibrationPage0(Qt.QWizardPage):
 
     def finalise_calibration(self):
         global vidTrack_setup_parameters
-        print("new video tracking method: %s" %(vidTrack_setup_parameters))
+        if self.vid_name == None:
+            try:
+                vidTrack_setup_parameters.pop('loaded_video_aspect_ratio', None)
+            except:
+                pass
+        vidTrack_setup_parameters["ref_col"] = ()
+        vidTrack_setup_parameters["calib_col"] = ()
+        vidTrack_setup_parameters["simps"] = {}
+        print("new video tracking setup: %s" %(vidTrack_setup_parameters))
 
                    
 class CalibrationPage1(Qt.QWizardPage):
@@ -177,7 +235,7 @@ class CalibrationPage1(Qt.QWizardPage):
         self.vid_name = vid_name
 
         self.setTitle(self.tr("Calibrate the video tracking method!"))
-        self.setSubTitle(self.tr("Calibrate your camera for the frame differencing video tracking method"))
+        self.setSubTitle(self.tr("Calibrate your camera for the frame differencing tracking method"))
 
         boldFont = Qt.QFont()
         boldFont.setBold(True)
@@ -281,7 +339,7 @@ class CalibrationPage1(Qt.QWizardPage):
         except:
             pass
 
-        self.pshBtn4 = Qt.QPushButton(self.tr("Finalise Calibration"))
+        self.pshBtn4 = Qt.QPushButton(self.tr("FINALISE CALIBRATION"))
         self.pshBtn4.clicked.connect(self.finalise_calibration)
 
         spacer1 = Qt.QLabel()
@@ -326,14 +384,14 @@ class CalibrationPage1(Qt.QWizardPage):
         layout6.addWidget(self.pshBtn4)
         
     def nextId(self):
-        return -1
+        return CameraWizard.PageSimplifications1
 
     def pixels_to_millimetres(self):
         global vidTrack_setup_parameters
         if self.cam != None:
-            temp = live_pixels_to_cm(self.cam)
+            temp = live_pixels_to_cm()
         elif self.vid_name != None:
-            temp = vid_pixels_to_cm(self.vid_name)
+            temp = vid_pixels_to_cm(self.vid_name, vidTrack_setup_parameters)
         pix_width = int(temp[1][0]-temp[0][0])
         pix_height = int(temp[1][1]-temp[0][1])
         cm_width = float(self.lneEdt1.text())
@@ -353,25 +411,26 @@ class CalibrationPage1(Qt.QWizardPage):
         try:
             self.ref_image_name = Qt.QFileDialog.getOpenFileName(self, 'Load Reference Image')
             self.btnLneEdt1.setText(self.ref_image_name)
-            vidTrack_setup_parameters["reference_image_name"] = self.ref_image_name
+            vidTrack_setup_parameters["reference_image_name"] = self.btnLneEdt1.text()
         except:
             pass
 
     def capture_reference_image(self):
         global vidTrack_setup_parameters
-        self.ref_image_name = self.lneEdt3.text()
+        self.temp_ref_image_name = self.lneEdt7.text()
         if self.cam != None:
-            temp_image = live_capture_ref_image(self.cam, self.ref_image_name)
+            temp_image = live_capture_ref_image(self.temp_ref_image_name)
         elif self.vid_name != None:
-            temp_image = vid_capture_ref_image(self.vid_name)
-        vidTrack_setup_parameters["reference_image_name"] = self.ref_image_name
+            temp_image = vid_capture_ref_image(self.vid_name, self.temp_ref_image_name, vidTrack_setup_parameters)
+        self.btnLneEdt1.setText(os.path.abspath(self.temp_ref_image_name))
+        vidTrack_setup_parameters["reference_image_name"] = self.btnLneEdt1.text()
     
     def colour_calibration(self):
         global vidTrack_setup_parameters
         if self.cam != None:
-            temp = live_colour_calib(self.cam)
+            temp = live_colour_calib(vidTrack_setup_parameters)
         elif self.vid_name != None:
-            temp = vid_colour_calib(self.vid_name)
+            temp = vid_colour_calib(self.vid_name, vidTrack_setup_parameters)
         calib_col = temp
         vidTrack_setup_parameters["calib_col"] = calib_col
         self.lneEdt8.setText(str(calib_col[0]))
@@ -379,7 +438,12 @@ class CalibrationPage1(Qt.QWizardPage):
         
     def finalise_calibration(self):
         global vidTrack_setup_parameters
-        print("new video tracking method: %s" %(vidTrack_setup_parameters))
+        if self.vid_name == None:
+            try:
+                vidTrack_setup_parameters.pop('loaded_video_aspect_ratio', None)
+            except:
+                pass
+
         
 class CalibrationPage2(Qt.QWizardPage):
                    
@@ -392,7 +456,7 @@ class CalibrationPage2(Qt.QWizardPage):
         self.vid_name = vid_name
         
         self.setTitle(self.tr("Calibrate the video tracking method!"))
-        self.setSubTitle(self.tr("Calibrate your camera for the MOG video tracking method"))
+        self.setSubTitle(self.tr("Calibrate your camera for the MOG tracking method"))
         
         lbl1 = Qt.QLabel(self.tr("Arena width (cm):"))
         self.lneEdt1 = Qt.QLineEdit()
@@ -473,7 +537,7 @@ class CalibrationPage2(Qt.QWizardPage):
         except:
             pass
 
-        self.pshBtn3 = Qt.QPushButton(self.tr("Finalise Calibration"))
+        self.pshBtn3 = Qt.QPushButton(self.tr("FINALISE CALIBRATION"))
         self.pshBtn3.clicked.connect(self.finalise_calibration)
 
         spacer1 = Qt.QLabel()
@@ -506,14 +570,14 @@ class CalibrationPage2(Qt.QWizardPage):
         layout4.addWidget(self.pshBtn3)
 
     def nextId(self):
-        return -1
+        return CameraWizard.PageSimplifications2
 
     def pixels_to_millimetres(self):
         global vidTrack_setup_parameters
         if self.cam != None:
-            temp = live_pixels_to_cm(self.cam)
+            temp = live_pixels_to_cm()
         elif self.vid_name != None:
-            temp = vid_pixels_to_cm(self.vid_name)
+            temp = vid_pixels_to_cm(self.vid_name, vidTrack_setup_parameters)
         pix_width = int(temp[1][0]-temp[0][0])
         pix_height = int(temp[1][1]-temp[0][1])
         cm_width = float(self.lneEdt1.text())
@@ -531,9 +595,9 @@ class CalibrationPage2(Qt.QWizardPage):
     def colour_calibration(self):
         global vidTrack_setup_parameters
         if self.cam != None:
-            temp = live_colour_calib(self.cam)
+            temp = live_colour_calib(vidTrack_setup_parameters)
         elif self.vid_name != None:
-            temp = vid_colour_calib(self.vid_name)
+            temp = vid_colour_calib(self.vid_name, vidTrack_setup_parameters)
         calib_col = temp
         vidTrack_setup_parameters["calib_col"] = calib_col
         self.lneEdt7.setText(str(calib_col[0]))
@@ -541,9 +605,323 @@ class CalibrationPage2(Qt.QWizardPage):
 
     def finalise_calibration(self):
         global vidTrack_setup_parameters
-        print("new video tracking method: %s" %(vidTrack_setup_parameters))
+        if self.vid_name == None:
+            try:
+                vidTrack_setup_parameters.pop('loaded_video_aspect_ratio', None)
+            except:
+                pass
 
-      
+
+class SimplificationsPage1(Qt.QWizardPage):
+                   
+    def __init__(self, parent=None):
+        super(SimplificationsPage1, self).__init__(parent)
+
+        global vidTrack_setup_parameters
+
+        self.setTitle(self.tr("Video tracking simplifications"))
+        self.setSubTitle(self.tr("Choose whether or not to apply certain simplifications that will reduce processing load and increase video tracking frame rate"))
+
+        self.chkBtn1 = Qt.QCheckBox(self.tr("Show tracking window"))
+        self.chkBtn1.setChecked(True)
+        self.chkBtn1.stateChanged.connect(self.handleCheck1)
+
+        self.chkBtn6 = Qt.QCheckBox(self.tr("Only show arena area in tracking window"))
+        self.chkBtn6.setChecked(False)
+
+        self.chkBtn2 = Qt.QCheckBox(self.tr("Show previous animal positions (tracking history)"))
+        self.chkBtn2.setChecked(False)
+        
+        try:
+            if vidTrack_setup_parameters['simps']['show_window'] == True:
+                 self.chkBtn1.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['show_window'] == False:
+                self.chkBtn1.setChecked(False)
+        except:
+            pass
+
+        try:
+            if vidTrack_setup_parameters['simps']['only_show_arena'] == True:
+                self.chkBtn6.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['only_show_arena'] == False:
+                self.chkBtn6.setChecked(False)
+        except:
+            pass
+        
+        try:
+            if vidTrack_setup_parameters['simps']['show_trck_hist'] == True:
+                 self.chkBtn2.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['show_trck_hist'] == False:
+                self.chkBtn2.setChecked(False)
+        except:
+            pass
+        
+##        self.chkBtn3 = Qt.QCheckBox(self.tr("Use only a fraction of the video frames for tracking"))
+##        try:
+##            if vidTrack_setup_parameters['simps']['skip_frames'] == True:
+##                 self.chkBtn3.setChecked(True)
+##            elif vidTrack_setup_parameters['simps']['skip_frames'] == False:
+##                self.chkBtn3.setChecked(False)
+##        except:
+##            pass
+
+        self.chkBtn4 = Qt.QCheckBox(self.tr("Only sample pixels within the tracked arena"))
+        self.chkBtn4.setChecked(True)
+        try:
+            if vidTrack_setup_parameters['simps']['only_sample_arena'] == True:
+                 self.chkBtn4.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['only_sample_arena'] == False:
+                self.chkBtn4.setChecked(False)
+        except:
+            pass        
+
+##        self.chkBtn5 = Qt.QCheckBox(self.tr("Use the animal's previous position to predict where it will be located\nin the next frame to reduce search area"))
+##        try:
+##            if vidTrack_setup_parameters['simps']['predict_pos'] == True:
+##                 self.chkBtn5.setChecked(True)
+##            elif vidTrack_setup_parameters['simps']['predict_pos'] == False:
+##                self.chkBtn5.setChecked(False)
+##        except:
+##            pass  
+
+        self.pshBtn1 = Qt.QPushButton(self.tr("CONFIRM SIMPLIFICATIONS"))
+        self.pshBtn1.clicked.connect(self.confirm_selections)
+
+        lbl1 = Qt.QLabel("Tracking Window Simplifications")
+
+        self.frame1 = Qt.QFrame()
+        self.frame1.setFrameStyle(1)
+
+        frame_layout1 = Qt.QVBoxLayout()
+        frame_layout1.addWidget(self.chkBtn1)
+        frame_layout1.addWidget(self.chkBtn6)
+        frame_layout1.addWidget(self.chkBtn2)
+        self.frame1.setLayout(frame_layout1)
+
+        lbl2 = Qt.QLabel("Frame Differencing Tracking Algorithm Simplifications")
+
+        self.frame2 = Qt.QFrame()
+        self.frame2.setFrameStyle(1)
+
+        frame_layout2 = Qt.QVBoxLayout()
+##        frame_layout2.addWidget(self.chkBtn3)
+        frame_layout2.addWidget(self.chkBtn4)
+##        frame_layout2.addWidget(self.chkBtn5)
+        self.frame2.setLayout(frame_layout2)
+
+        spacer1 = Qt.QLabel()
+        spacer2 = Qt.QLabel()
+        spacer3 = Qt.QLabel()
+
+        layout1 = Qt.QVBoxLayout(self)
+        layout1.addWidget(spacer1)
+        layout1.addWidget(lbl1)
+        layout1.addWidget(self.frame1)
+        layout1.addWidget(spacer2)
+        layout1.addWidget(lbl2)
+        layout1.addWidget(self.frame2)
+        layout1.addWidget(spacer3)
+        layout1.addWidget(self.pshBtn1)
+
+    def nextId(self):
+        return -1
+
+    def handleCheck1(self):
+        if not self.chkBtn1.isChecked():
+            self.chkBtn6.setChecked(False)
+            self.chkBtn6.setDisabled(True)
+            self.chkBtn2.setChecked(False)
+            self.chkBtn2.setDisabled(True)
+        elif self.chkBtn1.isChecked():
+            self.chkBtn6.setDisabled(False)
+            self.chkBtn2.setDisabled(False)
+
+    def confirm_selections(self):
+        global vidTrack_setup_parameters
+        vidTrack_setup_parameters["simps"] = {}
+        if self.chkBtn1.isChecked():
+            vidTrack_setup_parameters["simps"]["show_window"] = True
+        elif not self.chkBtn1.isChecked():
+            vidTrack_setup_parameters["simps"]["show_window"] = False
+        if self.chkBtn6.isChecked():
+            vidTrack_setup_parameters["simps"]["show_arena_window"] = True
+        elif not self.chkBtn6.isChecked():
+            vidTrack_setup_parameters["simps"]["show_arena_window"] = False
+        if self.chkBtn2.isChecked():
+            vidTrack_setup_parameters["simps"]["show_trck_hist"] = True
+        elif not self.chkBtn2.isChecked():
+            vidTrack_setup_parameters["simps"]["show_trck_hist"] = False
+##        if not self.chkBtn3.isChecked():
+##            vidTrack_setup_parameters["simps"]["skip_frames"] = False
+##        elif self.chkBtn3.isChecked():
+##            vidTrack_setup_parameters["simps"]["skip_frames"] = True
+        if self.chkBtn4.isChecked():
+            vidTrack_setup_parameters["simps"]["only_sample_arena"] = True
+        elif not self.chkBtn4.isChecked():
+            vidTrack_setup_parameters["simps"]["only_sample_arena"] = False
+        #if not self.chkBtn5.isChecked():
+            #vidTrack_setup_parameters["simps"]["predict_pos"] = False
+        #elif self.chkBtn5.isChecked():
+            #vidTrack_setup_parameters["simps"]["predict_pos"] = True
+        print("new video tracking method: %s" %(vidTrack_setup_parameters))
+        
+
+class SimplificationsPage2(Qt.QWizardPage):
+                   
+    def __init__(self, parent=None):
+        super(SimplificationsPage2, self).__init__(parent)
+
+        global vidTrack_setup_parameters
+
+        self.setTitle(self.tr("Video tracking simplifications"))
+        self.setSubTitle(self.tr("Choose whether or not to apply certain simplifications that will reduce processing load and increase video tracking frame rate"))
+
+        self.chkBtn1 = Qt.QCheckBox(self.tr("Show tracking window"))
+        self.chkBtn1.setChecked(True)
+        self.chkBtn1.stateChanged.connect(self.handleCheck1)
+
+        self.chkBtn6 = Qt.QCheckBox(self.tr("Only show arena area in tracking window"))
+        self.chkBtn6.setChecked(True)
+
+        self.chkBtn2 = Qt.QCheckBox(self.tr("Show previous animal positions (tracking history)"))
+        self.chkBtn2.setChecked(False)
+        
+        try:
+            if vidTrack_setup_parameters['simps']['show_window'] == True:
+                 self.chkBtn1.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['show_window'] == False:
+                self.chkBtn1.setChecked(False)
+        except:
+            pass
+
+        try:
+            if vidTrack_setup_parameters['simps']['only_show_arena'] == True:
+                print("holla")
+                self.chkBtn6.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['only_show_arena'] == False:
+                print("stein")
+                self.chkBtn6.setChecked(False)
+        except:
+            pass
+        
+        try:
+            if vidTrack_setup_parameters['simps']['show_trck_hist'] == True:
+                 self.chkBtn2.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['show_trck_hist'] == False:
+                self.chkBtn2.setChecked(False)
+        except:
+            pass
+        
+##        self.chkBtn3 = Qt.QCheckBox(self.tr("Use only a fraction of the video frames for tracking"))
+##        try:
+##            if vidTrack_setup_parameters['simps']['skip_frames'] == True:
+##                 self.chkBtn3.setChecked(True)
+##            elif vidTrack_setup_parameters['simps']['skip_frames'] == False:
+##                self.chkBtn3.setChecked(False)
+##        except:
+##            pass
+
+        self.chkBtn4 = Qt.QCheckBox(self.tr("Only sample pixels within the tracked arena"))
+        self.chkBtn4.setChecked(True)
+        try:
+            if vidTrack_setup_parameters['simps']['only_sample_arena'] == True:
+                 self.chkBtn4.setChecked(True)
+            elif vidTrack_setup_parameters['simps']['only_sample_arena'] == False:
+                self.chkBtn4.setChecked(False)
+        except:
+            pass        
+
+##        self.chkBtn5 = Qt.QCheckBox(self.tr("Use the animal's previous position to predict where it will be located\nin the next frame to reduce search area"))
+##        try:
+##            if vidTrack_setup_parameters['simps']['predict_pos'] == True:
+##                 self.chkBtn5.setChecked(True)
+##            elif vidTrack_setup_parameters['simps']['predict_pos'] == False:
+##                self.chkBtn5.setChecked(False)
+##        except:
+##            pass  
+
+        self.pshBtn1 = Qt.QPushButton(self.tr("CONFIRM SIMPLIFICATIONS"))
+        self.pshBtn1.clicked.connect(self.confirm_selections)
+
+        lbl1 = Qt.QLabel("Tracking Window Simplifications")
+
+        self.frame1 = Qt.QFrame()
+        self.frame1.setFrameStyle(1)
+
+        frame_layout1 = Qt.QVBoxLayout()
+        frame_layout1.addWidget(self.chkBtn1)
+        frame_layout1.addWidget(self.chkBtn6)
+        frame_layout1.addWidget(self.chkBtn2)
+        self.frame1.setLayout(frame_layout1)
+
+        lbl2 = Qt.QLabel("MOG Tracking Algorithm Simplifications")
+
+        self.frame2 = Qt.QFrame()
+        self.frame2.setFrameStyle(1)
+
+        frame_layout2 = Qt.QVBoxLayout()
+##        frame_layout2.addWidget(self.chkBtn3)
+        frame_layout2.addWidget(self.chkBtn4)
+##        frame_layout2.addWidget(self.chkBtn5)
+        self.frame2.setLayout(frame_layout2)
+
+        spacer1 = Qt.QLabel()
+        spacer2 = Qt.QLabel()
+        spacer3 = Qt.QLabel()
+
+        layout1 = Qt.QVBoxLayout(self)
+        layout1.addWidget(spacer1)
+        layout1.addWidget(lbl1)
+        layout1.addWidget(self.frame1)
+        layout1.addWidget(spacer2)
+        layout1.addWidget(lbl2)
+        layout1.addWidget(self.frame2)
+        layout1.addWidget(spacer3)
+        layout1.addWidget(self.pshBtn1)
+
+    def nextId(self):
+        return -1
+
+    def handleCheck1(self):
+        if not self.chkBtn1.isChecked():
+            self.chkBtn6.setChecked(False)
+            self.chkBtn6.setDisabled(True)
+            self.chkBtn2.setChecked(False)
+            self.chkBtn2.setDisabled(True)
+        elif self.chkBtn1.isChecked():
+            self.chkBtn6.setDisabled(False)
+            self.chkBtn2.setDisabled(False)
+
+    def confirm_selections(self):
+        global vidTrack_setup_parameters
+        vidTrack_setup_parameters["simps"] = {}
+        if self.chkBtn1.isChecked():
+            vidTrack_setup_parameters["simps"]["show_window"] = True
+        elif not self.chkBtn1.isChecked():
+            vidTrack_setup_parameters["simps"]["show_window"] = False
+        if self.chkBtn6.isChecked():
+            vidTrack_setup_parameters["simps"]["show_arena_window"] = True
+        elif not self.chkBtn6.isChecked():
+            vidTrack_setup_parameters["simps"]["show_arena_window"] = False
+        if self.chkBtn2.isChecked():
+            vidTrack_setup_parameters["simps"]["show_trck_hist"] = True
+        elif not self.chkBtn2.isChecked():
+            vidTrack_setup_parameters["simps"]["show_trck_hist"] = False
+##        if not self.chkBtn3.isChecked():
+##            vidTrack_setup_parameters["simps"]["skip_frames"] = False
+##        elif self.chkBtn3.isChecked():
+##            vidTrack_setup_parameters["simps"]["skip_frames"] = True
+        if self.chkBtn4.isChecked():
+            vidTrack_setup_parameters["simps"]["only_sample_arena"] = True
+        elif not self.chkBtn4.isChecked():
+            vidTrack_setup_parameters["simps"]["only_sample_arena"] = False
+##        if not self.chkBtn5.isChecked():
+##            vidTrack_setup_parameters["simps"]["predict_pos"] = False
+##        elif self.chkBtn5.isChecked():
+##            vidTrack_setup_parameters["simps"]["predict_pos"] = True
+        print("new video tracking setup: %s" %(vidTrack_setup_parameters))
+
+
 # main ===========================================
 
 def main():

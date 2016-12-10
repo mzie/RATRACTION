@@ -171,7 +171,7 @@ class MethodsPage(Qt.QWizardPage):
         ard_setup_parameters["naming_list"] = naming_list
         ard_setup_parameters["setup_list"] = setup_list
         ard_setup_parameters["loop_list"] = loop_list
-        print("new arduino method: %s" %(ard_setup_parameters))
+        print("new DAAC setup: %s" %(ard_setup_parameters))
         
              
 # main ==========================================

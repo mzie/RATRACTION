@@ -41,7 +41,7 @@ class MainWindow(Qt.QMainWindow):
                     dinputs.append(pins_assigned[key][0])
             elif pins_assigned[key][1] == "OUTPUT":
                 outputs.append(pins_assigned[key][0])
-        other = ["vid_time", "ard_loop_time", "pos", "self.actButton1_on", "self.actButton2_on", "self.actButton3_on",
+        other = ["vidTrack_time", "ard_loop_time", "pos", "self.actButton1_on", "self.actButton2_on", "self.actButton3_on",
                  "self.actButton4_on","self.actButton5_on", "self.actButton6_on", "self.actButton7_on", "self.actButton8_on"]
                       
 class Start(Qt.QWidget):
@@ -617,6 +617,8 @@ class TestButton5(Qt.QWidget):
         self.label2 = Qt.QLabel("if")
         self.cmBox2 = Qt.QComboBox()
         self.cmBox2.addItems([("%s" %(item)) for item in outputs])
+        self.cmBox2.addItems([("%s" %(item)) for item in ainputs])
+        self.cmBox2.addItems([("%s" %(item)) for item in dinputs])
         self.cmBox2.addItems(other)
         self.cmBox3 = Qt.QComboBox()
         self.cmBox3.addItems([">", "<", "==", "!=", "in", "not in"])
@@ -647,9 +649,13 @@ class TestButton5(Qt.QWidget):
 
     def get_instructions(self):
         if (self.cmBox2.currentText() == "pos") and (self.cmBox3.currentText() == "in"):
-            instructions = "%s if ((vid_tracking_methods.mod_pt[0] >= eval(str(%s))[0]) and (vid_tracking_methods.mod_pt[1] >= eval(str(%s))[1]) and (vid_tracking_methods.mod_pt[0] <= eval(str(%s))[2]) and (vid_tracking_methods.mod_pt[1] <= eval(str(%s))[3])) else %s" %(self.cmBox1.currentText(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.cmBox5.currentText())
+            instructions = '%s if ((vid_tracking_methods.mod_pt[0] >= eval(str(%s))[0]) and (vid_tracking_methods.mod_pt[1] >= eval(str(%s))[1]) and (vid_tracking_methods.mod_pt[0] <= eval(str(%s))[2]) and (vid_tracking_methods.mod_pt[1] <= eval(str(%s))[3])) else %s' %(self.cmBox1.currentText(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.cmBox5.currentText())
         elif (self.cmBox2.currentText() == "pos") and (self.cmBox3.currentText() == "not in"):
-            instructions = "%s if (((vid_tracking_methods.mod_pt[0] <= eval(str(%s))[0]) or (vid_tracking_methods.mod_pt[0] >= eval(str(%s))[2])) or ((vid_tracking_methods.mod_pt[1] <= eval(str(%s))[1]) or (vid_tracking_methods.mod_pt[1] >= eval(str(%s))[3]))) else %s" %(self.cmBox1.currentText(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.cmBox5.currentText())
+            instructions = '%s if (((vid_tracking_methods.mod_pt[0] <= eval(str(%s))[0]) or (vid_tracking_methods.mod_pt[0] >= eval(str(%s))[2])) or ((vid_tracking_methods.mod_pt[1] <= eval(str(%s))[1]) or (vid_tracking_methods.mod_pt[1] >= eval(str(%s))[3]))) else %s' %(self.cmBox1.currentText(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.lneEdt2.text(), self.cmBox5.currentText())
+        elif self.cmBox2.currentText() == "vidTrack_time":
+            instructions = '%s if vid_tracking_methods.run_tme_ %s int(%s) else %s' %(self.cmBox1.currentText(), self.cmBox3.currentText(), self.lneEdt2.text(), self.cmBox5.currentText())
+        elif self.cmBox2.currentText() == "ard_loop_time":
+            instructions = '%s if current_loop_time %s int(%s) else %s' %(self.cmBox1.currentText(), self.cmBox3.currentText(), self.lneEdt2.text(), self.cmBox5.currentText())
         elif self.cmBox2.currentText() in outputs:
             instructions = '%s if ard_results["%s"][-1] %s "%s" else %s' %(self.cmBox1.currentText(), self.cmBox2.currentText(), self.cmBox3.currentText(), self.lneEdt2.text(), self.cmBox5.currentText())
         else:

@@ -52,20 +52,20 @@ class MyWindow(Qt.QMainWindow):
         load_results = Qt.QAction("&Load Raw Data", self)
         load_results.triggered.connect(self.load_results)
 
-        processResults1 = Qt.QAction("&Grid Time Analysis", self)
-        processResults1.triggered.connect(self.grid_time_analysis)
+        analyseResults1 = Qt.QAction("&Grid Time Analysis", self)
+        analyseResults1.triggered.connect(self.grid_time_analysis)
 
-        processResults2 = Qt.QAction("ROI Time Analysis", self)
-        processResults2.triggered.connect(self.roi_time_analysis)
+        analyseResults2 = Qt.QAction("ROI Time Analysis", self)
+        analyseResults2.triggered.connect(self.roi_time_analysis)
 
-        processResults3 = Qt.QAction("&Animal Movement Scatterplot", self)
-        processResults3.triggered.connect(self.animal_movement_scatterplot)
+        analyseResults3 = Qt.QAction("&Animal Movement Scatterplot", self)
+        analyseResults3.triggered.connect(self.animal_movement_scatterplot)
 
-        processResults4 = Qt.QAction("&Animal Movement Heatmap", self)
-        processResults4.triggered.connect(self.animal_movement_heatmap)
+        analyseResults4 = Qt.QAction("&Animal Movement Heatmap", self)
+        analyseResults4.triggered.connect(self.animal_movement_heatmap)
 
-        processResults5 = Qt.QAction("&Locomotor Parameters", self)
-        processResults5.triggered.connect(self.locomotor_parameters)
+        analyseResults5 = Qt.QAction("&Locomotor Parameters", self)
+        analyseResults5.triggered.connect(self.locomotor_parameters)
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
@@ -76,14 +76,15 @@ class MyWindow(Qt.QMainWindow):
         resultsMenu.addSeparator()
         resultsMenu.addAction(load_results)
         
-        processingMenu = menubar.addMenu("&Results Processing")
-        processingMenu.addAction(processResults1)
-        processingMenu.addAction(processResults2)
-        processingMenu.addAction(processResults3)
-        processingMenu.addAction(processResults4)
-        processingMenu.addAction(processResults5)
+        analysisMenu = menubar.addMenu("&Data Analysis")
+        analysisMenu.addAction(analyseResults1)
+        analysisMenu.addAction(analyseResults2)
+        analysisMenu.addAction(analyseResults3)
+        analysisMenu.addAction(analyseResults4)
+        analysisMenu.addAction(analyseResults5)
                 
         self.setMinimumWidth(1150)
+        #self.setMinimumHeight(800)
         self.setWindowTitle(self.tr("RATRACTION"))
         self.show()
                

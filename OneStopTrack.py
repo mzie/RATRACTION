@@ -21,8 +21,6 @@ import time
 import sys
 import cv2
 from collections import (deque, OrderedDict)
-from picamera.array import PiRGBArray
-from picamera import PiCamera
 import vid_tracking_methods
 import Arduino_Wizard_v2
 import Camera_Wizard_v2
@@ -88,40 +86,39 @@ class VideoTracking(Qt.QObject):
             if camera:
                 if vidTrack_setup_parameters['video_tracking_algorithm'] == "MOG":
                     if not recording:
-                        live_trck = vid_tracking_methods.live_mog_tracking(camera, vidTrack_setup_parameters)
-                        return live_trck
+                        live_MOG_trck = vid_tracking_methods.live_mog_tracking(vidTrack_setup_parameters)
+                        return live_MOG_trck
                     elif recording and vidTrack_setup_parameters != None:
-                        live_trck = vid_tracking_methods.live_mog_tracking(camera, vidTrack_setup_parameters, recording, record_name)
-                        return live_trck
+                        recorded_live_MOG_trck = vid_tracking_methods.live_mog_tracking(vidTrack_setup_parameters, recording, record_name)
+                        return recorded_live_MOG_trck
                 elif vidTrack_setup_parameters['video_tracking_algorithm'] == "Frame Differencing":
                     if not recording:
-                        live_trck = vid_tracking_methods.live_fd_tracking(camera, vidTrack_setup_parameters)
-                        return live_trck
+                        live_FD_trck = vid_tracking_methods.live_fd_tracking(vidTrack_setup_parameters)
+                        return live_FD_trck
                     elif recording and vidTrack_setup_parameters != None:
-                        live_trck = vid_tracking_methods.live_fd_tracking(camera, vidTrack_setup_parameters, recording, record_name)
-                        return live_trck
+                        recorded_live_FD_trck = vid_tracking_methods.live_fd_tracking(vidTrack_setup_parameters, recording, record_name)
+                        return recorded_live_FD_trck
                 elif vidTrack_setup_parameters['video_tracking_algorithm'] == "None":
                     if not recording:
-                        live_cam_feed = vid_tracking_methods.live_camera_feed(camera)
+                        live_cam_feed = vid_tracking_methods.live_camera_feed()
                         return live_cam_feed
                     elif recording:
-                        live_cam_feed = vid_tracking_methods.live_camera_feed(camera, recording, record_name)
-                        return record_video
-                        
+                        recorded_live_cam_feed = vid_tracking_methods.live_camera_feed(recording, record_name)
+                        return recorded_live_cam_feed    
             elif video_name:
                 if vidTrack_setup_parameters['video_tracking_algorithm'] == "MOG":
-                    vid_trck = vid_tracking_methods.vid_mog_tracking(video_name, vidTrack_setup_parameters)
-                    return vid_trck
+                    vid_MOG_trck = vid_tracking_methods.vid_mog_tracking(video_name, vidTrack_setup_parameters)
+                    return vid_MOG_trck
                 elif vidTrack_setup_parameters['video_tracking_algorithm'] == "Frame Differencing":
-                    vid_trck = vid_tracking_methods.vid_fd_tracking(video_name, vidTrack_setup_parameters)
-                    return vid_trck
+                    vid_FD_trck = vid_tracking_methods.vid_fd_tracking(video_name, vidTrack_setup_parameters)
+                    return vid_FD_trck
                 elif vidTrack_setup_parameters['video_tracking_algorithm'] == "None": 
-                    vid_feed = vid_tracking_methods.video_feed(video_name)
-                    return vid_feed
+                    recorded_vid_feed = vid_tracking_methods.video_feed(video_name, vidTrack_setup_parameters)
+                    return recorded_vid_feed
             else:
-                print("video tracking method is either missing or contains an error/s")
+                print("video tracking setup is either missing or contains an error/s")
         except:
-            print("video tracking method is either missing or contains an error/s")
+            print("video tracking setup is either missing or contains an error/s")
                                    
     def stop(self):
         global _isRunning
@@ -147,12 +144,18 @@ class Arduino(Qt.QObject):
         self.actButton8_on = False
  
     def Run(self):
-        global ard_results, _isRunning2, ard_setup_parameters, a, mod_pt
+        global ard_results, _isRunning2, ard_setup_parameters, a, mod_pt, run_tme_
         
         ard_results = {}
         
         if not _isRunning2:
             _isRunning2 = True      
+
+        try:
+            a
+        except:
+            self.stop()
+            return None
 
         try:
             if ard_setup_parameters == None:
@@ -182,7 +185,6 @@ class Arduino(Qt.QObject):
                 current_loop_time = millis - start
                 ard_results['ard_loop_time'].append(round(current_loop_time, 2))
                 for line in loop_list:
-
                     try:
                         exec(line)
                     except:
@@ -192,7 +194,8 @@ class Arduino(Qt.QObject):
                 if pins[key][1] == "OUTPUT":
                     exec("a.digitalWrite(%s, a.LOW)" %(pins[key][0]))
         except:
-            print("arduino method is either missing or contains an error/s")
+            self.stop()
+            print("DAAC setup is either missing or contains an error/s")
                           
     def stop(self):
         global _isRunning2
@@ -325,7 +328,7 @@ class Window(Qt.QWidget):
 
         self.frame4 = Qt.QFrame()
         self.frame4.setFrameStyle(1)
-        self.frame4.setFixedSize(350,375)
+        self.frame4.setFixedSize(350,370)
 
         self.arena_setup_new_edit = Qt.QPushButton("New/Edit")
         self.arena_setup_new_edit.clicked.connect(self.new_edit_arena_setup)
@@ -438,7 +441,7 @@ class Window(Qt.QWidget):
 
         self.frame1 = Qt.QFrame()
         self.frame1.setFrameStyle(1)
-        self.frame1.setFixedSize(350,150)
+        self.frame1.setFixedSize(350,140)
 
         frame_layout1 = Qt.QVBoxLayout()
         frame_layout1.addWidget(self.radBtn1)
@@ -457,6 +460,17 @@ class Window(Qt.QWidget):
         self.btnLneEdt1.setDisabled(True)
         self.btnLneEdt1.buttonClicked.connect(self.find_video_recording)
 
+        self.vid_len_label = Qt.QLabel("Loaded video length / Trial Runtime (seconds):")
+        self.vid_len_label.setDisabled(True)
+
+        self.vid_len_spnBox = Qt.QSpinBox()
+        self.vid_len_spnBox.setMaximum(86400)
+        self.vid_len_spnBox.setDisabled(True)
+
+        vidLenLayout = Qt.QFormLayout()
+        vidLenLayout.addRow(self.vid_len_label, self.vid_len_spnBox)
+        vidLenLayout.setLabelAlignment(QtCore.Qt.AlignRight)
+        
         self.new_edit2 = Qt.QPushButton("New/Edit")
         self.new_edit2.clicked.connect(self.new_edit_video_tracking_method)
         self.new_edit2.setDisabled(True)
@@ -476,11 +490,12 @@ class Window(Qt.QWidget):
 
         self.frame2 = Qt.QFrame()
         self.frame2.setFrameStyle(1)
-        self.frame2.setFixedSize(350,150)
+        self.frame2.setFixedSize(350,145)
 
         frame_layout2 = Qt.QVBoxLayout()
         frame_layout2.addWidget(self.radBtn2)
         frame_layout2.addWidget(self.btnLneEdt1)
+        frame_layout2.addLayout(vidLenLayout)
         frame_layout2.addLayout(butLayout2)
         self.frame2.setLayout(frame_layout2)
 
@@ -508,7 +523,7 @@ class Window(Qt.QWidget):
 
         self.frame3 = Qt.QFrame()
         self.frame3.setFrameStyle(1)
-        self.frame3.setFixedSize(350,100)
+        self.frame3.setFixedSize(350,80)
 
         frame_layout3 = Qt.QVBoxLayout()
         frame_layout3.addWidget(self.radBtn3)
@@ -734,26 +749,17 @@ class Window(Qt.QWidget):
     def connect_to_camera(self):
         global camera, vidTrack_setup_parameters
         if self.radBtn1.isChecked():
-            try:
-                camera = PiCamera()
-                self.new_edit1.setDisabled(False)
-                self.load1.setDisabled(False)
-                self.save1.setDisabled(False)
-                self.radBtn4.setDisabled(False)
+            camera = True
+            self.new_edit1.setDisabled(False)
+            self.load1.setDisabled(False)
+            self.save1.setDisabled(False)
+            self.radBtn4.setDisabled(False)
 
-                self.radBtn2.setChecked(False)
-                #self.load_video_recording()
-                
-            except:
-                print("Failed to connect to Camera")
-                self.radBtn1.setChecked(False)  # change back to False
+            self.radBtn2.setChecked(False)
+            #self.load_video_recording()
 
         elif not self.radBtn1.isChecked():
-            try:
-                camera.close()
-                camera = None
-            except:
-                pass
+            camera = None
             vidTrack_setup_parameters = None
             self.new_edit1.setDisabled(True)
             self.load1.setDisabled(True)
@@ -775,10 +781,10 @@ class Window(Qt.QWidget):
     def load_video_tracking_method(self):
         try:
             global vidTrack_setup_parameters
-            name = Qt.QFileDialog.getOpenFileName(self, 'Load Video Tracking Method')
+            name = Qt.QFileDialog.getOpenFileName(self, 'Load Video Tracking Setup')
             with open(name, 'r') as f:
                 vidTrack_setup_parameters = eval(f.read())
-            print("loaded video tracking method: %s" %(vidTrack_setup_parameters))
+            print("loaded video tracking setup: %s" %(vidTrack_setup_parameters))
         except:
             pass
 
@@ -790,10 +796,10 @@ class Window(Qt.QWidget):
                     from Camera_Wizard_v2 import vidTrack_setup_parameters
                 except:
                     pass
-            name = Qt.QFileDialog.getSaveFileName(self, 'Save Video Tracking Method')
+            name = Qt.QFileDialog.getSaveFileName(self, 'Save Video Tracking Setup')
             with open(name, 'w') as text_file:
                 text_file.write(str(vidTrack_setup_parameters))
-            print("video tracking method saved %s" %(vidTrack_setup_parameters))
+            print("video tracking setup saved %s" %(vidTrack_setup_parameters))
         except:
             pass
 
@@ -812,6 +818,7 @@ class Window(Qt.QWidget):
         global video_name, vidTrack_setup_parameters
         if self.radBtn2.isChecked():
             self.btnLneEdt1.setDisabled(False)
+            self.radBtn4.setChecked(False)
             self.radBtn4.setDisabled(False)
 
             self.radBtn1.setChecked(False)
@@ -822,6 +829,9 @@ class Window(Qt.QWidget):
             vidTrack_setup_parameters = None
             self.btnLneEdt1.clear()
             self.btnLneEdt1.setDisabled(True)
+            self.vid_len_label.setDisabled(True)
+            self.vid_len_spnBox.clear()
+            self.vid_len_spnBox.setDisabled(True)
             self.new_edit2.setDisabled(True)
             self.load2.setDisabled(True)
             self.save2.setDisabled(True)
@@ -831,6 +841,8 @@ class Window(Qt.QWidget):
             global video_name
             video_name = Qt.QFileDialog.getOpenFileName(self, 'Find Video Recording')
             self.btnLneEdt1.setText(video_name)
+            self.vid_len_label.setDisabled(False)
+            self.vid_len_spnBox.setDisabled(False)
             self.new_edit2.setDisabled(False)
             self.load2.setDisabled(False)
             self.save2.setDisabled(False)
@@ -875,10 +887,10 @@ class Window(Qt.QWidget):
     def load_ard_method(self):
         global ard_setup_parameters
         try:
-            name = Qt.QFileDialog.getOpenFileName(self, 'Load Arduino Method')
+            name = Qt.QFileDialog.getOpenFileName(self, 'Load DAAC setup')
             with open(name, 'r') as f:
                 ard_setup_parameters = eval(f.read())
-            print("loaded arduino method: %s" %(ard_setup_parameters))
+            print("loaded DAAC setup: %s" %(ard_setup_parameters))
         except:
             pass
 
@@ -890,10 +902,10 @@ class Window(Qt.QWidget):
                     from Arduino_Wizard_v2 import ard_setup_parameters
                 except:
                     pass
-            name = Qt.QFileDialog.getSaveFileName(self, 'Save Arduino Method')
+            name = Qt.QFileDialog.getSaveFileName(self, 'Save DAAC setup')
             with open(name, 'w') as text_file:
                 text_file.write(str(ard_setup_parameters))
-            print("arduino method saved %s" %(ard_setup_parameters))
+            print("DAAC setup saved %s" %(ard_setup_parameters))
         except:
             pass
     
@@ -946,12 +958,12 @@ class Window(Qt.QWidget):
 
         self.timer_reset()
         self.timer_start()
-        
-        trck = self.vidTracking.Run()
 
+        if (self.radBtn1.isChecked() or self.radBtn2.isChecked()):
+            trck = self.vidTracking.Run()
+            
         while _isRunning2:
             Qt.qApp.processEvents()
-            continue
 
         self.timer.stop()
         
@@ -967,33 +979,68 @@ class Window(Qt.QWidget):
         self.actButton8.setChecked(False)
 
         vidTrack_results = {}
+        trial_info = {}
         try:
-            if (vidTrack_setup_parameters['video_tracking_algorithm'] == "Frame Differencing") or (vidTrack_setup_parameters['video_tracking_algorithm'] == "MOG") :
-                vidTrack_results['vid_time'] = trck[0]
+            if (vidTrack_setup_parameters['video_tracking_algorithm'] == "Frame Differencing") or (vidTrack_setup_parameters['video_tracking_algorithm'] == "MOG"):
+                if self.radBtn1.isChecked() or (self.radBtn2.isChecked() and (int(self.vid_len_spnBox.value() == 0))):
+                    vidTrack_results['run_time'] = trck[2]
+                    trial_info['Trial_Duration'] = trck[2][-1]
+                    vidTrack_results['vid_pts_time'] = trck[0]
+                elif self.radBtn2.isChecked() and (int(self.vid_len_spnBox.value()) != 0):
+                    video_time_calibration_factor = trck[2][-1]/int(self.vid_len_spnBox.value())
+                    vidTrack_results['run_time'] = []
+                    for time in trck[2]:
+                        mod_time = round(time/video_time_calibration_factor, 2)
+                        vidTrack_results['run_time'].append(mod_time)
+                    trial_info['Trial_Duration'] = vidTrack_results['run_time'][-1]
+                    vidTrack_results['vid_pts_time'] = []
+                    for time in trck[0]:
+                        mod_time = round(time/video_time_calibration_factor, 2)
+                        vidTrack_results["vid_pts_time"].append(mod_time)
                 vidTrack_results['position'] = trck[1]
             elif vidTrack_setup_parameters['video_tracking_algorithm'] == "None":
-                vidTrack_results['vid_time'] = trck
+                if self.radBtn1.isChecked() or (self.radBtn2.isChecked() and (int(self.vid_len_spnBox.value()) == 0)):
+                    vidTrack_results['run_time'] = trck
+                    trial_info['Trial_Duration'] = trck[-1]
+                elif self.radBtn2.isChecked() and (int(self.vid_len_spnBox.value()) != 0):
+                    video_time_calibration_factor = (trck[-1]/int(self.vid_len_spnBox.value()))
+                    vidTrack_results['vid_pts_time'] = []
+                    for time in trck[0]:
+                        mod_time = round(time/video_time_calibration_factor, 2)
+                        vidTrack_results['vid_pts_time'].append(mod_time)
+                    trial_info['Trial_Duration'] = vidTrack_results['run_time'][-1]
         except:
             pass
         
         try:
             try:
-                duration = str(vidTrack_results['vid_time'][-1])
+                duration = str(trial_info['Trial_Duration'])
             except:
                 duration = str(ard_results['ard_loop_time'][-1])
         except:
             duration = str(0)
 
-        trial_info = {"Date":date, "Start_Time":start_time, "End_Time":end_time, "Trial_Duration":duration}
+        trial_info["Date"] = date
+        trial_info["Start_Time"] = start_time
+        trial_info["End_Time"] = end_time
+        trial_info["Trial_Duration"] = duration
 
         self.table_rowCount += 1
         self.table.setRowCount(self.table_rowCount)
 
         global_results[str(self.table_rowCount)] = {}
         global_results[str(self.table_rowCount)]["trial_info"] = trial_info
-        global_results[str(self.table_rowCount)]["results"] = vidTrack_results
-        global_results[str(self.table_rowCount)]["results"].update(ard_results)
-            
+        try:
+            global_results[str(self.table_rowCount)]["results"] = vidTrack_results
+            global_results[str(self.table_rowCount)]["results"].update(ard_results)
+            try:
+                ard_results = {}
+                global_results[str(self.table_rowCount)]["results"].update(ard_results)
+            except:
+                pass
+        except:
+            pass
+
         self.table.setItem(self.table_rowCount-1, 0, Qt.QTableWidgetItem(str(self.table_rowCount)))
         self.table.setItem(self.table_rowCount-1, 1, Qt.QTableWidgetItem(date))
         self.table.setItem(self.table_rowCount-1, 2, Qt.QTableWidgetItem(start_time))

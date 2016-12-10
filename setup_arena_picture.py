@@ -4,6 +4,7 @@ from picamera import PiCamera
 import time
 import cv2
 import sys
+import os
 from PyQt4 import Qt
 from PyQt4 import (QtGui, QtCore)
 import matplotlib.pyplot as plt
@@ -63,7 +64,15 @@ class Window(Qt.QWidget):
         lbl2 = Qt.QLabel(self.tr("OR"))
         lbl2.setFont(boldFont)
 
-        lbl3 = Qt.QLabel(self.tr("Capture Reference Image:"))
+        lbl8 = Qt.QLabel(self.tr("Loaded video aspect ratio (width:height)"))
+        self.lneEdt4 = Qt.QLineEdit()
+        lbl8.setBuddy(self.lneEdt4)
+        try:
+            self.lneEdt4.setText(arena_setup_parameters['loaded_video_aspect_ratio'])
+        except:
+            pass
+
+        lbl3 = Qt.QLabel(self.tr("Capture Arena Picture:"))
         self.lneEdt1 = Qt.QLineEdit()
         self.lneEdt1.setText("example_arena_pic.png")
         lbl3.setBuddy(self.lneEdt1)
@@ -126,6 +135,8 @@ class Window(Qt.QWidget):
         layout2 = Qt.QFormLayout()
         layout2.addRow(lbl1, self.btnLneEdt1)
         layout2.addRow(lbl2)
+        if self.vid_name != None:
+            layout2.addRow(lbl8, self.lneEdt4)
         layout2.addRow(lbl3, layout1)
 
         layout3 = Qt.QFormLayout()
@@ -155,20 +166,28 @@ class Window(Qt.QWidget):
             pass
 
     def capture_arena_pic(self):
-        self.arena_pic_name = self.lneEdt1.text()
+        self.temp_pic_name = self.lneEdt1.text()
         if self.cam != None:
             temp_image = live_cap_arena_pic(self.cam, self.arena_pic_name)
         elif self.vid_name != None:
-            temp_image = vid_cap_arena_pic(self.vid_name, self.arena_pic_name)
-        
+            self.loaded_video_aspect_ratio = self.lneEdt4.text()
+            temp_image = vid_cap_arena_pic(self.vid_name, self.temp_pic_name, self.loaded_video_aspect_ratio)
+        self.btnLneEdt1.setText(os.path.abspath(self.temp_pic_name))
+
     def draw_arena_setup(self):
         global arena_setup_parameters
-        self.arena_pic_name = self.btnLneEdt1.text()
         try:
+            self.arena_pic_name = self.btnLneEdt1.text()
             self.arena_pic = mpimg.imread(self.arena_pic_name)
-            arena_setup_parameters = {"arena_pic_name":self.arena_pic_name}
+            try:
+               arena_setup_parameters['arena_pic_name'] = self.arena_pic_name
+            except:
+                arena_setup_parameters = {"arena_pic_name":self.arena_pic_name}
         except:
-            arena_setup_parameters = {"arena_pic_name":"no picture"}
+            try:
+                arena_setup_parameters['arena_pic_name'] = "no picture"
+            except:
+                arena_setup_parameters = {"arena_pic_name":"no picture"}
         self.arena_width = float(self.lneEdt2.text())
         self.arena_height = float(self.lneEdt3.text())
         self.num_width_divs = int(self.spnBox1.text())+1
@@ -180,6 +199,16 @@ class Window(Qt.QWidget):
         arena_setup_parameters["arena_height"] = self.arena_height
         arena_setup_parameters["width_div"] = self.width_div
         arena_setup_parameters["height_div"] = self.height_div
+        if self.vid_name != None:
+            try:
+                arena_setup_parameters["loaded_video_aspect_ratio"] = self.loaded_video_aspect_ratio
+            except:
+                pass
+        elif self.vid_name == None:
+            try:
+                vidTrack_setup_parameters.pop('loaded_video_aspect_ratio', None)
+            except:
+                pass
 
         self.fig = plt.figure()
         self.fig.canvas.set_window_title("Arena Setup Preview")
@@ -215,6 +244,8 @@ class Window(Qt.QWidget):
                         grid_label = self.axes.text(x,y, ("(%d,%d)" %(i,j)), fontsize=10, color='b', ha='center', va='center')
 
         plt.show()
+
+        print("new arena setup %s" %(arena_setup_parameters))
    
 
 # main ===============================================

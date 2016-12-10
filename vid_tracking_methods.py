@@ -1,10 +1,9 @@
 # import necessary packages and modules
-from picamera.array import PiRGBArray
-from picamera import PiCamera
 import numpy as np
 import time
 import cv2
 from collections import deque
+import itertools
 
 def on_mouse(event,x,y,flags,params):
 
@@ -26,7 +25,7 @@ def on_mouse(event,x,y,flags,params):
             endPoint = True
 
 
-def live_pixels_to_cm(camera):
+def live_pixels_to_cm():
 
     global rect,startPoint,endPoint
     
@@ -34,33 +33,35 @@ def live_pixels_to_cm(camera):
     startPoint = False
     endPoint = False
 
-    rawCapture = PiRGBArray(camera, size=(640, 480))
+    cap = cv2.VideoCapture(0)
 
     # allow the camera to warmup
     time.sleep(0.1)
 
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-
-        frame = frame.array
+    while(cap.isOpened()):
         
-        frame = cv2.resize(frame, (400, 200))
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Camera frame not returned. Camera may be missing or damaged")
+            break
+        
+        image = cv2.resize(frame, (400, 225))
 
         cv2.namedWindow("Live Camera Feed")
         cv2.setMouseCallback("Live Camera Feed", on_mouse)
 
         # drawing rectangle
         if startPoint == True and endPoint == True:
-            cv2.rectangle(frame, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
+            cv2.rectangle(image, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
 
-        cv2.imshow("Live Camera Feed", frame)
-
+        cv2.imshow("Live Camera Feed", image)
         key = cv2.waitKey(50) & 0xFF
-
         if key == 27:
             break
 
         if key == ord("i"):
-            uncropped_arena_pic = frame.copy()
+            uncropped_arena_pic = image.copy()
             if rect[0] < rect[2]:
                 if rect[0] > 4:
                     x1 = rect[0]-5
@@ -103,13 +104,12 @@ def live_pixels_to_cm(camera):
             if key == 27:
                 break
 
-        rawCapture.truncate(0)
-
+    cap.release()
     cv2.destroyAllWindows()
     return ((rect[0],rect[1]),(rect[2],rect[3]))
 
 
-def vid_pixels_to_cm(video_name):
+def vid_pixels_to_cm(video_name, vidTrack_setup_parameters):
     
     global rect,startPoint,endPoint
     
@@ -119,34 +119,36 @@ def vid_pixels_to_cm(video_name):
 
     cap = cv2.VideoCapture('more sample videos.mp4')
 
+    vid_aspect_ratio = float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[0])/float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[1])
+    mod_video_resolution = (400, int(400/vid_aspect_ratio))
+
     # reading the first frame
-    (grabbed, frame) = cap.read()
+    ret, frame = cap.read()
 
     while(cap.isOpened()):
 
-        (grabbed, frame) = cap.read()
+        ret, frame = cap.read()
 
-        if not grabbed:
+        if not ret:
+            print("Video recording frame not returned. Video recording may be missing or damaged")
             break
 
-        frame = cv2.resize(frame, (400,200))
+        image = cv2.resize(frame, mod_video_resolution)
 
-        cv2.namedWindow("Video Feed")
-        cv2.setMouseCallback("Video Feed", on_mouse)
+        cv2.namedWindow("Recorded Video")
+        cv2.setMouseCallback("Recorded Video", on_mouse)
 
         # drawing rectangle
         if startPoint == True and endPoint == True:
-            cv2.rectangle(frame, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
+            cv2.rectangle(image, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
 
-        cv2.imshow("Video Feed", frame)
-
+        cv2.imshow("Recorded Video", image)
         key = cv2.waitKey(50) & 0xFF
-
         if key == 27:
             break
 
         if key == ord("i"):
-            uncropped_arena_pic = frame.copy()
+            uncropped_arena_pic = image.copy()
             if rect[0] < rect[2]:
                 if rect[0] > 4:
                     x1 = rect[0]-5
@@ -194,7 +196,7 @@ def vid_pixels_to_cm(video_name):
     return ((rect[0],rect[1]),(rect[2],rect[3]))
 
 
-def live_cap_arena_pic(camera, arena_pic_name):
+def live_cap_arena_pic(arena_pic_name):
 
     global rect,startPoint,endPoint
     
@@ -202,88 +204,29 @@ def live_cap_arena_pic(camera, arena_pic_name):
     startPoint = False
     endPoint = False
 
-    rawCapture = PiRGBArray(camera, size=(640, 480))
+    cap = cv2.VideoCapture(0)
 
     # allow the camera to warmup
     time.sleep(0.1)
 
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+    while(cap.isOpened()):
 
-        frame = frame.array
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Camera frame not returned. Camera may be missing or damaged")
+            break
         
-        frame = cv2.resize(frame, (400, 200))
+        image = cv2.resize(frame, (400, 225))
 
         cv2.namedWindow("Live Camera Feed")
         cv2.setMouseCallback("Live Camera Feed", on_mouse)
 
         # drawing rectangle
         if startPoint == True and endPoint == True:
-            cv2.rectangle(frame, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
+            cv2.rectangle(image (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
 
-        cv2.imshow("Live Camera Feed", frame)
-
-        key = cv2.waitKey(50) & 0xFF
-
-        if key == 27:
-            break
-
-        if key == ord("i"):
-            uncropped_arena_pic = frame.copy()
-            if rect[0] < rect[2]:
-                    x1 = rect[0]
-                    x2 = rect[2]
-            elif rect[0] > rect[2]:
-                    x1 = rect[2]
-                    x2 = rect[0]
-            if rect[1] < rect[3]:
-                    y1 = rect[1]
-                    y2 = rect[3]
-            elif rect[1] > rect[3]:
-                    y1 = rect[3]
-                    y2 = rect[1]
-            cropped_arena_pic = uncropped_arena_pic[y1:y2, x1:x2]
-            cv2.imshow("Picture of Arena", cropped_arena_pic)
-            key = cv2.waitKey(1)
-            cv2.imwrite(arena_pic_name, cropped_arena_pic)
-            if key == 27:
-                break
-
-        rawCapture.truncate(0)
-
-    cv2.destroyAllWindows()
-    return None
-
-
-def vid_cap_arena_pic(video_name, arena_pic_name):
-    
-    global rect,startPoint,endPoint
-    
-    rect = (0,0,0,0)
-    startPoint = False
-    endPoint = False
-
-    cap = cv2.VideoCapture(video_name)
-
-    # reading the first frame
-    (grabbed, frame) = cap.read()
-
-    while(cap.isOpened()):
-
-        (grabbed, frame) = cap.read()
-
-        if not grabbed:
-            break
-
-        frame = cv2.resize(frame, (400,200))
-
-        cv2.namedWindow("Video Feed")
-        cv2.setMouseCallback("Video Feed", on_mouse)
-
-        # drawing rectangle
-        if startPoint == True and endPoint == True:
-            cv2.rectangle(frame, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
-
-        cv2.imshow("Video Feed", frame)
+        cv2.imshow("Live Camera Feed", image)
 
         key = cv2.waitKey(50) & 0xFF
 
@@ -291,7 +234,7 @@ def vid_cap_arena_pic(video_name, arena_pic_name):
             break
 
         if key == ord("i"):
-            uncropped_arena_pic = frame.copy()
+            uncropped_arena_pic = image.copy()
             if rect[0] < rect[2]:
                     x1 = rect[0]
                     x2 = rect[2]
@@ -316,123 +259,87 @@ def vid_cap_arena_pic(video_name, arena_pic_name):
     return None
 
 
-##def live_pixels_to_cm(camera):
-##    global frame, roiPts, inputMode
-##
-##    frame = None
-##    roiPts = []
-##    inputMode = False
-##
-##    def selectROI(event, x, y, flags, param):
-##        global frame, roiPts, inputMode
-##
-##        if inputMode and event == cv2.EVENT_LBUTTONDOWN and len(roiPts) < 4:
-##            roiPts.append((x,y))
-##            cv2.circle(frame, (x, y), 4, (0, 255, 0), 2)
-##            cv2.imshow("frame", frame)
-##
-##    rawCapture = PiRGBArray(camera, size=(640, 480))
-##
-##    # allow the camera to warmup
-##    time.sleep(0.1)
-##
-##    cv2.namedWindow("frame")
-##    cv2.setMouseCallback("frame", selectROI)
-##
-##    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-##
-##        frame = frame.array
-##        
-##        frame = cv2.resize(frame, (400, 200))
-##
-##        cv2.imshow("frame", frame)
-##        key = cv2.waitKey(1)
-##
-##        if key == ord("i") and len(roiPts) < 4:
-##            inputMode = True
-##            orig = frame.copy()
-##
-##            while len(roiPts) < 4:
-##                cv2.imshow("frame", frame)
-##                cv2.waitKey(0)
-##
-##            roiPts = np.array(roiPts)
-##            s = roiPts.sum(axis = 1)
-##            tl = tuple(roiPts[np.argmin(s)])
-##            br = tuple(roiPts[np.argmax(s)])
-##
-##        rawCapture.truncate(0)
-##
-##        if key == 27:
-##            break
-##
-##    cv2.destroyAllWindows()
-##    return (tl,br)
+def vid_cap_arena_pic(video_name, vidTrack_setup_parameters, arena_pic_name):
+    
+    global rect,startPoint,endPoint
+    
+    rect = (0,0,0,0)
+    startPoint = False
+    endPoint = False
+
+    cap = cv2.VideoCapture(video_name)
+
+    vid_aspect_ratio = float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[0])/float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[1])
+    mod_video_resolution = (400, int(400/vid_aspect_ratio))
+
+    # reading the first frame
+    ret, frame = cap.read()
+
+    while(cap.isOpened()):
+
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Video recording frame not returned. Video recording may be missing or damaged")
+            break
+
+        image = cv2.resize(frame, mod_video_resolution)
+
+        cv2.namedWindow("Recorded Video")
+        cv2.setMouseCallback("Recorded Video", on_mouse)
+
+        # drawing rectangle
+        if startPoint == True and endPoint == True:
+            cv2.rectangle(image, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 255), 1)
+
+        cv2.imshow("Recorded Video", image)
+
+        key = cv2.waitKey(50) & 0xFF
+
+        if key == 27:
+            break
+
+        if key == ord("i"):
+            uncropped_arena_pic = image.copy()
+            if rect[0] < rect[2]:
+                    x1 = rect[0]
+                    x2 = rect[2]
+            elif rect[0] > rect[2]:
+                    x1 = rect[2]
+                    x2 = rect[0]
+            if rect[1] < rect[3]:
+                    y1 = rect[1]
+                    y2 = rect[3]
+            elif rect[1] > rect[3]:
+                    y1 = rect[3]
+                    y2 = rect[1]
+            cropped_arena_pic = uncropped_arena_pic[y1:y2, x1:x2]
+            cv2.imshow("Picture of Arena", cropped_arena_pic)
+            key = cv2.waitKey(1)
+            cv2.imwrite(arena_pic_name, cropped_arena_pic)
+            if key == 27:
+                break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    return None
 
 
-##def vid_pixels_to_cm(video_name):
-##    global frame, roiPts, inputMode
-##
-##    frame = None
-##    roiPts = []
-##    inputMode = False
-##
-##    def selectROI(event, x, y, flags, param):
-##        global frame, roiPts, inputMode
-##
-##        if inputMode and event == cv2.EVENT_LBUTTONDOWN and len(roiPts) < 4:
-##            roiPts.append((x,y))
-##            cv2.circle(frame, (x, y), 4, (0, 255, 0), 2)
-##            cv2.imshow("frame", frame)
-##
-##    cap = cv2.VideoCapture(video_name)
-##
-##    cv2.namedWindow("frame")
-##    cv2.setMouseCallback("frame", selectROI)
-##
-##    while(cap.isOpened()):
-##        ret, frame = cap.read()
-##
-##        if not ret:
-##                break
-##
-##        frame = cv2.resize(frame, (400, 200))
-##
-##        cv2.imshow("frame", frame)
-##        key = cv2.waitKey(1)
-##
-##        if key == ord("i") and len(roiPts) < 4:
-##            inputMode = True
-##            orig = frame.copy()
-##
-##            while len(roiPts) < 4:
-##                cv2.imshow("frame", frame)
-##                cv2.waitKey(0)
-##
-##            roiPts = np.array(roiPts)
-##            s = roiPts.sum(axis = 1)
-##            tl = tuple(roiPts[np.argmin(s)])
-##            br = tuple(roiPts[np.argmax(s)])
-##
-##        if key == 27:
-##            break
-##
-##    cap.release()
-##    cv2.destroyAllWindows()
-##    return (tl,br)
-
-
-def live_capture_ref_image(camera, ref_image_name):
-    rawCapture = PiRGBArray(camera, size=(640, 480))
+def live_capture_ref_image(ref_image_name):
+    
+    cap = cv2.VideoCapture(0)
 
     # allow the camera to warmup
     time.sleep(0.1)
 
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+    while(cap.isOpened()):
+        ret, frame = cap.read()
 
-        frame = frame.array
+        if not ret:
+            print("Camera frame not returned. Camera may be missing or damaged")
+            break
             
-        image = cv2.resize(frame, (400, 200))
+        image = cv2.resize(frame, (400, 225))
             
         cv2.imshow("Live Camera Feed", image)
     
@@ -447,27 +354,32 @@ def live_capture_ref_image(camera, ref_image_name):
             if key == 27:
                 break
     
-        rawCapture.truncate(0)
-
     cv2.imwrite(ref_image_name, ref_image)
+    cap.release()
     cv2.destroyAllWindows()
     return None  
 
 
-def vid_capture_ref_image(video_name):
+def vid_capture_ref_image(video_name, ref_image_name, vidTrack_setup_parameters):
+
+    vid_aspect_ratio = float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[0])/float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[1])
+    mod_video_resolution = (400, int(400/vid_aspect_ratio))
+
     cap = cv2.VideoCapture(video_name)
 
     while(cap.isOpened()):
         ret, frame = cap.read()
 
         if not ret:
+            print("Video recording frame not returned. Video recording may be missing or damaged")
             break
 
-        image = cv2.resize(frame, (400, 200))
+        image = cv2.resize(frame, mod_video_resolution)
         
-        cv2.imshow("Video Feed", image)
+        cv2.imshow("Recorded Video", image)
         
-        k = cv2.waitKey(1)
+        k = cv2.waitKey(50) & 0xFF
+        
         if k == 27:
             break
 
@@ -475,334 +387,57 @@ def vid_capture_ref_image(video_name):
             ref_image = image.copy()
             cv2.imshow("Reference Image", ref_image)
             k = cv2.waitKey(1)
+            cv2.imwrite(ref_image_name, ref_image)
             if k == 27:
                 break
 
-    cv2.imwrite(ref_image_name, ref_image)
     cap.release()
     cv2.destroyAllWindows()
     return None
 
 
-def live_colour_calib(camera):
-    rawCapture = PiRGBArray(camera, size=(640, 480))
+def live_colour_calib(vidTrack_setup_parameters):
+    
+    cap = cv2.VideoCapture(0)
+
+    video_tracking_algorithm = vidTrack_setup_parameters['video_tracking_algorithm']
+
+    if video_tracking_algorithm == "MOG":
+        fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+    elif video_tracking_algorithm == "Frame Differencing":
+        ref_image_name = vidTrack_setup_parameters['reference_image_name']
+        ref_image = cv2.imread(ref_image_name)
+        hsv_ref_image = cv2.cvtColor(ref_image, cv2.COLOR_BGR2HSV)
 
     # allow the camera to warmup
     time.sleep(0.1)
-
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-
-        frame = frame.array
-            
-        image = cv2.resize(frame, (400, 200))
-            
-        cv2.imshow("Live Camera Feed", image)
-    
-        k = cv2.waitKey(1)
-        if k == 27:
-                break
-    
-        if k == ord('i'):
-    
-            def nothing(x):
-                    pass
-                    
-            cv2.namedWindow("mask")
-    
-            # create trackbars for color change
-            cv2.createTrackbar('Hl', 'mask', 0, 179, nothing)
-            cv2.createTrackbar('Hu', 'mask', 179, 179, nothing)
-    
-            cv2.createTrackbar('Sl', 'mask', 0, 255, nothing)
-            cv2.createTrackbar('Su', 'mask', 255, 255, nothing)
-    
-            cv2.createTrackbar('Vl', 'mask', 0, 255, nothing)
-            cv2.createTrackbar('Vu', 'mask', 255, 255, nothing)
-    
-            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            
-            while True:
-                hl = cv2.getTrackbarPos('Hl', 'mask')
-                sl = cv2.getTrackbarPos('Sl', 'mask')
-                vl = cv2.getTrackbarPos('Vl', 'mask')
-    
-                hu = cv2.getTrackbarPos('Hu', 'mask')
-                su = cv2.getTrackbarPos('Su', 'mask')
-                vu = cv2.getTrackbarPos('Vu', 'mask')
-    
-                lower_b = np.array([hl, sl, vl])
-                upper_b = np.array([hu, su, vu])
-    
-                mask = cv2.inRange(hsv, lower_b, upper_b)
-                                                    
-                cv2.imshow("mask", mask)
-                k = cv2.waitKey(1)
-                if k == ord('i'):
-                    break
-
-        try:
-            tracking_preview = image.copy()
-            hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            live_mask = cv2.inRange(hsv_image, lower_b, upper_b)
-            
-            _, cnts, _ = cv2.findContours(live_mask.copy(), cv2.RETR_EXTERNAL,
-                            cv2.CHAIN_APPROX_SIMPLE)
-
-            centre = None
-       
-            # only proceed if at least one contour was found
-            if len(cnts) > 0:
-                # find the largest contour in the mask, then use it to
-                # compute the centroid
-                c = max(cnts, key=cv2.contourArea)
-                M = cv2.moments(c)
-                try:
-                    centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
-
-                    cv2.circle(tracking_preview, centre, 5, (255,0,0), -1)
-                except:
-                    pass
-            
-            cv2.imshow("Live Camera Tracking Preview", tracking_preview)
-            k = cv2.waitKey(1)
-            if k == 27:
-                break
-        except:
-            pass
-
-        rawCapture.truncate(0)
-               
-    cv2.destroyAllWindows()
-    return ([hl,sl,vl],[hu,su,vu])
-
-
-def vid_colour_calib(video_name):
-    cap = cv2.VideoCapture(video_name)
 
     while(cap.isOpened()):
         ret, frame = cap.read()
 
         if not ret:
+            print("Camera frame not returned. Camera may be missing or damaged")
             break
-
-        image = cv2.resize(frame, (400, 200))
-        
-        cv2.imshow("Video Feed", image)
-
-        k = cv2.waitKey(1)
-        if k == 27:
-                break
-
-        if k == ord('i'):
-
-            def nothing(x):
-                    pass
             
-            cv2.namedWindow("mask")
-
-            # create trackbars for color change
-            cv2.createTrackbar('Hl', 'mask', 0, 179, nothing)
-            cv2.createTrackbar('Hu', 'mask', 179, 179, nothing)
-
-            cv2.createTrackbar('Sl', 'mask', 0, 255, nothing)
-            cv2.createTrackbar('Su', 'mask', 255, 255, nothing)
-
-            cv2.createTrackbar('Vl', 'mask', 0, 255, nothing)
-            cv2.createTrackbar('Vu', 'mask', 255, 255, nothing)
-
-            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            
-            while True:
-                hl = cv2.getTrackbarPos('Hl', 'mask')
-                sl = cv2.getTrackbarPos('Sl', 'mask')
-                vl = cv2.getTrackbarPos('Vl', 'mask')
-
-                hu = cv2.getTrackbarPos('Hu', 'mask')
-                su = cv2.getTrackbarPos('Su', 'mask')
-                vu = cv2.getTrackbarPos('Vu', 'mask')
-
-                lower_b = np.array([hl, sl, vl])
-                upper_b = np.array([hu, su, vu])
-
-                mask = cv2.inRange(hsv, lower_b, upper_b)
-                                        
-                cv2.imshow("mask", mask)
-                k = cv2.waitKey(1)
-                if k == ord('i'):
-                    break
+        image = cv2.resize(frame, (400, 225))
 
         try:
-            tracking_preview = image.copy()
             hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            live_mask = cv2.inRange(hsv_image, lower_b, upper_b)
+            colourmask = cv2.inRange(hsv_image, lower_b, upper_b)
             
-            _, cnts, _ = cv2.findContours(live_mask.copy(), cv2.RETR_EXTERNAL,
+            if video_tracking_algorithm == "MOG":
+                bsmask = fgbg.apply(colourmask)
+            elif video_tracking_algorithm == "Frame Differencing":
+                ref_image_mask = cv2.inRange(hsv_ref_image, lower_b, upper_b)
+                bsmask = cv2.absdiff(colourmask, ref_image_mask)
+            
+            _, cnts, _ = cv2.findContours(bsmask.copy(), cv2.RETR_EXTERNAL,
                             cv2.CHAIN_APPROX_SIMPLE)
 
             centre = None
        
             # only proceed if at least one contour was found
             if len(cnts) > 0:
-                # find the largest contour in the mask, then use it to
-                # compute the centroid
-                c = max(cnts, key=cv2.contourArea)
-                M = cv2.moments(c)
-                try:
-                    centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
-
-                    cv2.circle(tracking_preview, centre, 5, (255,0,0), -1)
-                except:
-                    pass
-            
-            cv2.imshow("Video Feed Tracking Preview", tracking_preview)
-            k = cv2.waitKey(1)
-            if k == 27:
-                break
-        except:
-            pass
-
-    cap.release() 
-    cv2.destroyAllWindows()
-    return ([hl,sl,vl],[hu,su,vu])
-
-
-def live_camera_feed(camera, recording=False, record_name=None):
-    tme = deque()
-
-    rawCapture = PiRGBArray(camera, size=(640, 480))
-
-    if recording:
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(record_name, fourcc, 30.0, (400, 200))
-
-    # allow the camera to warmup
-    time.sleep(0.1)
-
-    start = float(time.time())
-
-    global _isRunning
-    from OneStopTrack import _isRunning
-    
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-
-        if not _isRunning:
-            break
-
-        frame = frame.array
-
-        image = cv2.resize(frame, (400, 200))
-
-        if recording:
-            # write the frame
-            out.write(image)
-
-        millis = float(time.time())
-        current_time = millis - start
-        tme.append(round(current_time, 2))
-
-        cv2.imshow("Live Camera Feed", image)
-        cv2.waitKey(1)
-
-        rawCapture.truncate(0)
-
-        from OneStopTrack import _isRunning
-
-    if recording:
-        out.release()
-    cv2.destroyAllWindows()
-    return (tme)
-
-
-def video_feed(video_name):
-    tme = deque()
-        
-    cap = cv2.VideoCapture(video_name)
-
-    start = float(time.time())
-
-    global _isRunning
-    from OneStopTrack import _isRunning
-
-    while _isRunning:
-        ret, frame = cap.read()
-
-        if not ret:
-            break
-
-        image = cv2.resize(frame, (400, 200))
-
-        millis = float(time.time())
-        current_time = millis - start
-        tme.append(round(current_time, 2))
-
-        cv2.imshow("Video Feed", image)
-        cv2.waitKey(1)
-
-        from OneStopTrack import _isRunning
-
-    cap.release()
-    cv2.destroyAllWindows()
-    return tme
-
-
-def live_mog_tracking(camera, vidTrack_setup_parameters, recording=False, record_name=None):
-    tme = deque()
-    pts = deque()
-    
-    global mod_pts
-    mod_pts = deque()
-
-    ref_col = vidTrack_setup_parameters['ref_col']
-    calib_col = vidTrack_setup_parameters['calib_col']
-    
-    rawCapture = PiRGBArray(camera, size=(640, 480))
-
-    fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
-
-    lower_b = np.array(calib_col[0])
-    upper_b = np.array(calib_col[1])
-
-    if recording:
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(record_name, fourcc, 30.0, (400, 200))
-
-    # allow the camera to warmup
-    time.sleep(0.1)
-
-    start = float(time.time())
-
-    global _isRunning
-    from OneStopTrack import _isRunning
-    
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-
-        if not _isRunning:
-            break
-
-        frame = frame.array
-
-        image = cv2.resize(frame, (400, 200))
-
-        # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        
-        # Threshold the HSV image to get only blue colours
-        mask = cv2.inRange(hsv, lower_b, upper_b)
-
-        fgmask = fgbg.apply(mask)
-
-        #kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
-
-        #opening = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
-        #closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
-
-        _, cnts, _ = cv2.findContours(fgmask.copy(), cv2.RETR_EXTERNAL,
-                        cv2.CHAIN_APPROX_SIMPLE)
-
-        centre = None
-        
-        # only proceed if at least one contour was found
-        if len(cnts) > 0:
                 # find the largest contour in the mask, then use it to
                 # compute the centroid
                 c = max(cnts, key=cv2.contourArea)
@@ -813,45 +448,247 @@ def live_mog_tracking(camera, vidTrack_setup_parameters, recording=False, record
                     cv2.circle(image, centre, 5, (255,0,0), -1)
                 except:
                     pass
-
-        millis = float(time.time())
-        current_time = millis - start
-
-        if centre != None:
-            tme.append(round(current_time, 2))
-
-            pts.append(centre)
-
-            mod_pt_x = (centre[0]-ref_col[0][0])*ref_col[4]
             
-            mod_pt_y = (centre[1]-ref_col[0][1])*ref_col[5]
+        except:
+            pass
+                    
+        cv2.imshow("Live Camera Feed", image)
+        k = cv2.waitKey(1)
+        if k == 27:
+            break
 
-            mod_pts.append((mod_pt_x,mod_pt_y))
-    
-        for i in range(1, len(pts)):
-            if pts[i-1] is None or pts[i] is None:
-                continue
-            cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
-                                     
-        cv2.imshow("Live Camera Tracking", image)
-        cv2.waitKey(1)
+        if k == ord('i'):
+
+            def nothing(x):
+                    pass
+            
+            cv2.namedWindow("Colour Mask")
+
+            # create trackbars for color change
+            cv2.createTrackbar('Hl', 'Colour Mask', 0, 179, nothing)
+            cv2.createTrackbar('Hu', 'Colour Mask', 179, 179, nothing)
+
+            cv2.createTrackbar('Sl', 'Colour Mask', 0, 255, nothing)
+            cv2.createTrackbar('Su', 'Colour Mask', 255, 255, nothing)
+
+            cv2.createTrackbar('Vl', 'Colour Mask', 0, 255, nothing)
+            cv2.createTrackbar('Vu', 'Colour Mask', 255, 255, nothing)
+
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            
+            while True:
+                hl = cv2.getTrackbarPos('Hl', 'Colour Mask')
+                sl = cv2.getTrackbarPos('Sl', 'Colour Mask')
+                vl = cv2.getTrackbarPos('Vl', 'Colour Mask')
+
+                hu = cv2.getTrackbarPos('Hu', 'Colour Mask')
+                su = cv2.getTrackbarPos('Su', 'Colour Mask')
+                vu = cv2.getTrackbarPos('Vu', 'Colour Mask')
+
+                lower_b = np.array([hl, sl, vl])
+                upper_b = np.array([hu, su, vu])
+
+                mask = cv2.inRange(hsv, lower_b, upper_b)
+                                        
+                cv2.imshow("Colour Mask", mask)
+                k = cv2.waitKey(1)
+                if k == ord('i'):
+                    break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    return ([hl,sl,vl],[hu,su,vu])   
+
+def vid_colour_calib(video_name, vidTrack_setup_parameters):
+
+    vid_aspect_ratio = float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[0])/float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[1])
+    mod_video_resolution = (400, int(400/vid_aspect_ratio))
+
+    video_tracking_algorithm = vidTrack_setup_parameters['video_tracking_algorithm']
+
+    if video_tracking_algorithm == "MOG":
+        fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+    elif video_tracking_algorithm == "Frame Differencing":
+        ref_image_name = vidTrack_setup_parameters['reference_image_name']
+        ref_image = cv2.imread(ref_image_name)
+        hsv_ref_image = cv2.cvtColor(ref_image, cv2.COLOR_BGR2HSV)
+
+    cap = cv2.VideoCapture(video_name)
+
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Video recording frame not returned. Video recording may be missing or damaged")
+            break
+
+        image = cv2.resize(frame, mod_video_resolution)
+
+        try:
+            hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            colourmask = cv2.inRange(hsv_image, lower_b, upper_b)
+
+            if video_tracking_algorithm == "MOG":
+                bsmask = fgbg.apply(colourmask)
+            elif video_tracking_algorithm == "Frame Differencing":
+                ref_image_mask = cv2.inRange(hsv_ref_image, lower_b, upper_b)
+                bsmask = cv2.absdiff(colourmask, ref_image_mask)
+            
+            _, cnts, _ = cv2.findContours(bsmask.copy(), cv2.RETR_EXTERNAL,
+                            cv2.CHAIN_APPROX_SIMPLE)
+
+            centre = None
+       
+            # only proceed if at least one contour was found
+            if len(cnts) > 0:
+                # find the largest contour in the mask, then use it to
+                # compute the centroid
+                c = max(cnts, key=cv2.contourArea)
+                M = cv2.moments(c)
+                try:
+                    centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
+
+                    cv2.circle(image, centre, 5, (255,0,0), -1)
+                except:
+                    pass
+            
+        except:
+            pass
+
+        cv2.imshow("Recorded Video", image)
+        k = cv2.waitKey(1)
+        if k == 27:
+            break
+
+        if k == ord('i'):
+
+            def nothing(x):
+                    pass
+            
+            cv2.namedWindow("Colour Mask")
+
+            # create trackbars for color change
+            cv2.createTrackbar('Hl', 'Colour Mask', 0, 179, nothing)
+            cv2.createTrackbar('Hu', 'Colour Mask', 179, 179, nothing)
+
+            cv2.createTrackbar('Sl', 'Colour Mask', 0, 255, nothing)
+            cv2.createTrackbar('Su', 'Colour Mask', 255, 255, nothing)
+
+            cv2.createTrackbar('Vl', 'Colour Mask', 0, 255, nothing)
+            cv2.createTrackbar('Vu', 'Colour Mask', 255, 255, nothing)
+
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            
+            while True:
+                hl = cv2.getTrackbarPos('Hl', 'Colour Mask')
+                sl = cv2.getTrackbarPos('Sl', 'Colour Mask')
+                vl = cv2.getTrackbarPos('Vl', 'Colour Mask')
+
+                hu = cv2.getTrackbarPos('Hu', 'Colour Mask')
+                su = cv2.getTrackbarPos('Su', 'Colour Mask')
+                vu = cv2.getTrackbarPos('Vu', 'Colour Mask')
+
+                lower_b = np.array([hl, sl, vl])
+                upper_b = np.array([hu, su, vu])
+
+                mask = cv2.inRange(hsv, lower_b, upper_b)
+                                        
+                cv2.imshow("Colour Mask", mask)
+                k = cv2.waitKey(1)
+                if k == ord('i'):
+                    break
+
+    cap.release() 
+    cv2.destroyAllWindows()
+    return ([hl,sl,vl],[hu,su,vu])
+
+
+def live_camera_feed(recording=False, record_name=None):
+    run_tme = deque()
+
+    cap = cv2.VideoCapture(0)
+
+    if recording:
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter(record_name, fourcc, 30.0, (400, 225))
+
+    # allow the camera to warmup
+    time.sleep(0.1)
+
+    start = float(time.time())
+
+    global _isRunning
+    from OneStopTrack import _isRunning
+
+    while _isRunning:
+
+        ret, frame = cap.read()
+
+        if not ret:
+            #print("Camera frame not returned. Camera may be missing or damaged")
+            break
+
+        image = cv2.resize(frame, (400,225))
 
         if recording:
             # write the frame
             out.write(image)
 
-        rawCapture.truncate(0)
+        millis = float(time.time())
+        current_time = round(millis - start, 2)
+        run_tme.append(current_time)
+
+        cv2.imshow("Live Camera Feed", image)
+        cv2.waitKey(1)
 
         from OneStopTrack import _isRunning
 
     if recording:
         out.release()
+    cap.release()
     cv2.destroyAllWindows()
-    return (tme, mod_pts)
+    return run_tme
 
-        
-def vid_mog_tracking(video_name, vidTrack_setup_parameters):
-    tme = deque()
+
+def video_feed(video_name, vidTrack_setup_parameters):
+    run_tme = deque()
+
+    vid_aspect_ratio = float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[0])/float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[1])
+    mod_video_resolution = (400, int(400/vid_aspect_ratio))
+
+    cap = cv2.VideoCapture(video_name)
+
+    start = float(time.time())
+
+    global _isRunning
+    from OneStopTrack import _isRunning
+
+    while _isRunning:
+        ret, frame = cap.read()
+
+        if not ret:
+            #print("Video recording frame not returned. Video recording may be missing or damaged")
+            break
+
+        image = cv2.resize(frame, mod_video_resolution)
+
+        millis = float(time.time())
+        current_time = round(millis - start, 2)
+        run_tme.append(current_time)
+
+        cv2.imshow("Recorded Video", image)
+        cv2.waitKey(1)
+
+        from OneStopTrack import _isRunning
+
+    cap.release()
+    cv2.destroyAllWindows()
+    return run_tme
+
+
+def live_mog_tracking(vidTrack_setup_parameters, recording=False, record_name=None):
+    run_tme = deque()
+    pts_tme = deque()
     pts = deque()
     
     global mod_pts, mod_pt
@@ -859,7 +696,156 @@ def vid_mog_tracking(video_name, vidTrack_setup_parameters):
 
     ref_col = vidTrack_setup_parameters['ref_col']
     calib_col = vidTrack_setup_parameters['calib_col']
+
+    show_window = vidTrack_setup_parameters['simps']['show_window']
+    show_arena_window = vidTrack_setup_parameters['simps']['show_arena_window']
+    show_trck_hist = vidTrack_setup_parameters['simps']['show_trck_hist']
+
+    only_sample_arena = vidTrack_setup_parameters['simps']['only_sample_arena']
+
+    x1 = ref_col[0][0]
+    x2 = ref_col[1][0]
+    y1 = ref_col[0][1]
+    y2 = ref_col[1][1]
+   
+    cap = cv2.VideoCapture(0)
+
+    fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+
+    lower_b = np.array(calib_col[0])
+    upper_b = np.array(calib_col[1])
+
+    if recording:
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter(record_name, fourcc, 30.0, (400, 225))
+
+    # allow the camera to warmup
+    time.sleep(0.1)
+
+    start = float(time.time())
+
+    global _isRunning
+    from OneStopTrack import _isRunning
     
+    while _isRunning:
+        ret, frame = cap.read()
+
+        if not ret:
+            #print("Camera frame not returned. Camera may be missing or damaged")
+            break
+
+        image = cv2.resize(frame, (400, 225))
+
+        if only_sample_arena:
+            hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+        else:
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        
+        # Threshold the HSV image to get only blue colours
+        mask = cv2.inRange(hsv, lower_b, upper_b)
+
+        #fgmask = fgbg.apply(mask, learningRate=0)
+        fgmask = fgbg.apply(mask)
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
+
+        fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
+        fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_CLOSE, kernel)
+
+        _, cnts, _ = cv2.findContours(fgmask.copy(), cv2.RETR_EXTERNAL,
+                        cv2.CHAIN_APPROX_SIMPLE)
+
+        centre = None
+        
+        # only proceed if at least one contour was found
+        if len(cnts) > 0:
+                # find the largest contour in the mask, then use it to
+                # compute the centroid
+                c = max(cnts, key=cv2.contourArea)
+                M = cv2.moments(c)
+                try:
+                    if only_sample_arena:
+                        centre = (int(M["m10"]/M["m00"])+x1, int(M["m01"]/M["m00"])+y1)
+                    else:
+                        centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
+                    cv2.circle(image, centre, 5, (255,0,0), -1)
+                except:
+                    pass
+
+        millis = float(time.time())
+        current_time = round(millis - start, 2)
+
+        run_tme.append(current_time)
+
+        if centre != None:
+            pts_tme.append(current_time)
+
+            if show_trck_hist:
+                if len(pts) <= 100:
+                    pts.append(centre)
+                elif len(pts) > 100:
+                    pts = deque(itertools.islice(pts, 1, len(pts)))
+                    pts.append(centre)
+
+            mod_pt_x = (centre[0]-ref_col[0][0])*ref_col[4]
+            
+            mod_pt_y = (centre[1]-ref_col[0][1])*ref_col[5]
+
+            mod_pts.append((mod_pt_x,mod_pt_y))
+
+            mod_pt = mod_pts[-1]
+
+        if show_trck_hist:
+            for i in range(1, len(pts)):
+                if pts[i-1] is None or pts[i] is None:
+                    continue
+                cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
+
+        if show_window:
+            if show_arena_window:
+                cv2.imshow("Live Camera Feed Tracking", image[y1:y2, x1:x2])
+            else:
+                cv2.imshow("Live Camera Feed Tracking", image)
+        cv2.waitKey(1)
+
+        if recording:
+            # write the frame
+            out.write(image)
+
+        from OneStopTrack import _isRunning
+
+    if recording:
+        out.release()
+    cap.release()
+    cv2.destroyAllWindows()
+    return (pts_tme, mod_pts, run_tme)
+
+        
+def vid_mog_tracking(video_name, vidTrack_setup_parameters):
+    run_tme = deque()
+    pts_tme = deque()
+    pts = deque()
+    
+    global mod_pts, mod_pt, run_tme_
+    mod_pts = deque()
+
+    ref_col = vidTrack_setup_parameters['ref_col']
+    calib_col = vidTrack_setup_parameters['calib_col']
+
+    vid_aspect_ratio = float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[0])/float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[1])
+    mod_video_resolution = (400, int(400/vid_aspect_ratio))
+
+    show_window = vidTrack_setup_parameters['simps']['show_window']
+    show_arena_window = vidTrack_setup_parameters['simps']['show_arena_window']
+    show_trck_hist = vidTrack_setup_parameters['simps']['show_trck_hist']
+
+    only_sample_arena = vidTrack_setup_parameters['simps']['only_sample_arena']
+
+    x1 = ref_col[0][0]
+    x2 = ref_col[1][0]
+    y1 = ref_col[0][1]
+    y2 = ref_col[1][1]
+
     cap = cv2.VideoCapture(video_name)
 
     fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
@@ -869,32 +855,32 @@ def vid_mog_tracking(video_name, vidTrack_setup_parameters):
 
     start = float(time.time())
 
-    #global _isRunning
-    #from OneStopTrack import _isRunning
     import OneStopTrack
     _isRunning = OneStopTrack._isRunning
 
-    #while(cap.isOpened())
     while _isRunning:
         ret, frame = cap.read()
 
         if not ret:
+            #print("Video recording frame not returned. Video recording may be missing or damaged")
             break
 
-        image = cv2.resize(frame, (400, 200))
+        image = cv2.resize(frame, mod_video_resolution)
 
-        # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        if only_sample_arena:
+            hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+        else:
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
                 
         # Threshold the HSV image to get only blue colours
         mask = cv2.inRange(hsv, lower_b, upper_b)
 
         fgmask = fgbg.apply(mask)
     
-        #kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
     
-        #opening = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
-        #closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
+        fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
+        fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_CLOSE, kernel)
     
         _, cnts, _ = cv2.findContours(fgmask.copy(), cv2.RETR_EXTERNAL,
                             cv2.CHAIN_APPROX_SIMPLE)
@@ -907,19 +893,30 @@ def vid_mog_tracking(video_name, vidTrack_setup_parameters):
             c = max(cnts, key=cv2.contourArea)
             M = cv2.moments(c)
             try:
-                centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
-    
+                if only_sample_arena:
+                    centre = (int(M["m10"]/M["m00"])+x1, int(M["m01"]/M["m00"])+y1)
+                else:
+                    centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
                 cv2.circle(image, centre, 5, (255,0,0), -1)
             except:
                 pass
 
-        millis = float(time.time())
-        current_time = millis - start
+        millis = float(time.time())        
+        current_time = round(millis - start, 2)
+
+        run_tme.append(current_time)
+
+        run_tme_ = run_tme[-1]
 
         if centre != None:
-            tme.append(round(current_time, 2))
+            pts_tme.append(current_time)
 
-            pts.append(centre)
+            if show_trck_hist:
+                if len(pts) <= 100:
+                    pts.append(centre)
+                elif len(pts) > 100:
+                    pts = deque(itertools.islice(pts, 1, len(pts)))
+                    pts.append(centre)
 
             mod_pt_x = (centre[0]-ref_col[0][0])*ref_col[4]
             
@@ -929,37 +926,56 @@ def vid_mog_tracking(video_name, vidTrack_setup_parameters):
 
             mod_pt = mod_pts[-1]
 
-        for i in range(1, len(pts)):
-            if pts[i-1] is None or pts[i] is None:
-                continue
-            cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
-                                         
-        cv2.imshow("Video Feed Tracking", image)
+        if show_trck_hist:
+            for i in range(1, len(pts)):
+                if pts[i-1] is None or pts[i] is None:
+                    continue
+                cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
+
+        if show_window:
+            if show_arena_window:
+                cv2.imshow("Recorded Video Tracking", image[y1:y2, x1:x2])
+            else:
+                cv2.imshow("Recorded Video Tracking", image)
         cv2.waitKey(1)
 
-        #from OneStopTrack import _isRunning
         _isRunning = OneStopTrack._isRunning
 
     cap.release()
     cv2.destroyAllWindows()
-    return (tme, mod_pts)
+    return (pts_tme, mod_pts, run_tme)
 
 
-def live_fd_tracking(camera, vidTrack_setup_parameters, recording=False, record_name=None):
-    tme = deque()
+def live_fd_tracking(vidTrack_setup_parameters, recording=False, record_name=None):
+    run_tme = deque()
+    pts_tme = deque()
     pts = deque()
     
-    global mod_pts
+    global mod_pts, mod_pt
     mod_pts = deque()
 
     ref_col = vidTrack_setup_parameters['ref_col']
     calib_col = vidTrack_setup_parameters['calib_col']
 
     ref_image_name = vidTrack_setup_parameters['reference_image_name']
-    
-    rawCapture = PiRGBArray(camera, size=(640, 480))
 
-    ref_image = cv2.imread(ref_image_name)
+    show_window = vidTrack_setup_parameters['simps']['show_window']
+    show_arena_window = vidTrack_setup_parameters['simps']['show_arena_window']
+    show_trck_hist = vidTrack_setup_parameters['simps']['show_trck_hist']
+
+    only_sample_arena = vidTrack_setup_parameters['simps']['only_sample_arena']
+
+    x1 = ref_col[0][0]
+    x2 = ref_col[1][0]
+    y1 = ref_col[0][1]
+    y2 = ref_col[1][1]
+    
+    cap = cv2.VideoCapture(0)
+
+    if only_sample_arena:
+        ref_image = cv2.imread(ref_image_name)[y1:y2, x1:x2]
+    else:
+        ref_image = cv2.imread(ref_image_name)
 
     lower_b = np.array(calib_col[0])
     upper_b = np.array(calib_col[1])
@@ -969,7 +985,7 @@ def live_fd_tracking(camera, vidTrack_setup_parameters, recording=False, record_
 
     if recording:
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(record_name, fourcc, 30.0, (400, 200))
+        out = cv2.VideoWriter(record_name, fourcc, 5.0, (400, 225))
 
     # allow the camera to warmup
     time.sleep(0.1)
@@ -979,26 +995,29 @@ def live_fd_tracking(camera, vidTrack_setup_parameters, recording=False, record_
     global _isRunning
     from OneStopTrack import _isRunning
     
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+    while _isRunning:
+        ret, frame = cap.read()
 
-        if not _isRunning:
+        if not ret:
+            #print("Camera frame not returned. Camera may be missing or damaged")
             break
 
-        frame = frame.array
+        image = cv2.resize(frame, (400, 225))
 
-        image = cv2.resize(frame, (400, 200))
-
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        if only_sample_arena:
+            hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+        else:
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         # Threshold the HSV image to get only blue colours
         mask = cv2.inRange(hsv, lower_b, upper_b)
 
         fdmask = cv2.absdiff(mask, ref_image_mask)
 
-        #kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
 
-        #opening = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
-        #closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
+        fdmask = cv2.morphologyEx(fdmask, cv2.MORPH_OPEN, kernel)
+        fdmask = cv2.morphologyEx(fdmask, cv2.MORPH_CLOSE, kernel)
 
         _, cnts, _ = cv2.findContours(fdmask.copy(), cv2.RETR_EXTERNAL,
                         cv2.CHAIN_APPROX_SIMPLE)
@@ -1012,61 +1031,95 @@ def live_fd_tracking(camera, vidTrack_setup_parameters, recording=False, record_
             c = max(cnts, key=cv2.contourArea)
             M = cv2.moments(c)
             try:
-                centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
+                if only_sample_arena:
+                    centre = (int(M["m10"]/M["m00"])+x1, int(M["m01"]/M["m00"])+y1)
+                else:
+                    centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
 
                 cv2.circle(image, centre, 5, (255,0,0), -1)
             except:
                 pass
 
         millis = float(time.time())
-        current_time = millis - start
+        current_time = round(millis - start, 2)
+
+        run_tme.append(current_time)
 
         if centre != None:
-            tme.append(round(current_time, 2))
+            pts_tme.append(current_time)
 
-            pts.append(centre)
+            if show_trck_hist:
+                if len(pts) <= 100:
+                    pts.append(centre)
+                elif len(pts) > 100:
+                    pts = deque(itertools.islice(pts, 1, len(pts)))
+                    pts.append(centre)
 
             mod_pt_x = (centre[0]-ref_col[0][0])*ref_col[4]
             
             mod_pt_y = (centre[1]-ref_col[0][1])*ref_col[5]
 
             mod_pts.append((mod_pt_x,mod_pt_y))
+
+            mod_pt = mod_pts[-1]
     
-        for i in range(1, len(pts)):
-            if pts[i-1] is None or pts[i] is None:
-                continue
-            cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
+        if show_trck_hist:
+            for i in range(1, len(pts)):
+                if pts[i-1] is None or pts[i] is None:
+                    continue
+                cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
                                      
-        cv2.imshow("Live Camera Tracking", image)
+        if show_window:
+            if show_arena_window:
+                cv2.imshow("Live Camera Feed Tracking", image[y1:y2, x1:x2])
+            else:
+                cv2.imshow("Live Camera Feed Tracking", image)
         cv2.waitKey(1)
 
         if recording:
             # write the frame
             out.write(image)
 
-        rawCapture.truncate(0)
-
         from OneStopTrack import _isRunning
     
     if recording:
         out.release()
+    cap.release()
     cv2.destroyAllWindows()
-    return (tme, mod_pts)
+    return (pts_tme, mod_pts, run_tme)
 
 
 def vid_fd_tracking(video_name, vidTrack_setup_parameters):
-    tme = deque()
+    run_tme = deque()
+    pts_tme = deque()
     pts = deque()
     
-    global mod_pts
+    global mod_pts, mod_pt
     mod_pts = deque()
 
     ref_col = vidTrack_setup_parameters['ref_col']
     calib_col = vidTrack_setup_parameters['calib_col']
 
     ref_image_name = vidTrack_setup_parameters['reference_image_name']
-    
-    ref_image = cv2.imread(ref_image_name)
+
+    vid_aspect_ratio = float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[0])/float(vidTrack_setup_parameters['loaded_video_aspect_ratio'].split(":")[1])
+    mod_video_resolution = (400, int(400/vid_aspect_ratio))
+
+    show_window = vidTrack_setup_parameters['simps']['show_window']
+    show_arena_window = vidTrack_setup_parameters['simps']['show_arena_window']
+    show_trck_hist = vidTrack_setup_parameters['simps']['show_trck_hist']
+
+    only_sample_arena = vidTrack_setup_parameters['simps']['only_sample_arena']
+
+    x1 = ref_col[0][0]
+    x2 = ref_col[1][0]
+    y1 = ref_col[0][1]
+    y2 = ref_col[1][1]
+
+    if only_sample_arena:
+        ref_image = cv2.imread(ref_image_name)[y1:y2, x1:x2]
+    else:
+        ref_image = cv2.imread(ref_image_name)
 
     lower_b = np.array(calib_col[0])
     upper_b = np.array(calib_col[1])
@@ -1086,21 +1139,25 @@ def vid_fd_tracking(video_name, vidTrack_setup_parameters):
         ret, frame = cap.read()
 
         if not ret:
+            #print("Video recording frame not returned. Video recording may be missing or damaged")
             break
 
-        image = cv2.resize(frame, (400, 200))
+        image = cv2.resize(frame, mod_video_resolution)
 
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        if only_sample_arena:
+            hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+        else:
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         # Threshold the HSV image to get only blue colours
         mask = cv2.inRange(hsv, lower_b, upper_b)
 
         fdmask = cv2.absdiff(mask, ref_image_mask)
 
-        #kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
 
-        #opening = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
-        #closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
+        fdmask = cv2.morphologyEx(fdmask, cv2.MORPH_OPEN, kernel)
+        fdmask = cv2.morphologyEx(fdmask, cv2.MORPH_CLOSE, kernel)
 
         _, cnts, _ = cv2.findContours(fdmask.copy(), cv2.RETR_EXTERNAL,
                         cv2.CHAIN_APPROX_SIMPLE)
@@ -1114,36 +1171,53 @@ def vid_fd_tracking(video_name, vidTrack_setup_parameters):
             c = max(cnts, key=cv2.contourArea)
             M = cv2.moments(c)
             try:
-                centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
+                if only_sample_arena:
+                    centre = (int(M["m10"]/M["m00"])+x1, int(M["m01"]/M["m00"])+y1)
+                else:
+                    centre = (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"]))
 
                 cv2.circle(image, centre, 5, (255,0,0), -1)
             except:
                 pass
 
         millis = float(time.time())
-        current_time = millis - start
+        current_time = round(millis - start, 2)
+
+        run_tme.append(current_time)
 
         if centre != None:
-            tme.append(round(current_time, 2))
+            pts_tme.append(current_time)
 
-            pts.append(centre)
+            if show_trck_hist:
+                if len(pts) <= 100:
+                    pts.append(centre)
+                elif len(pts) > 100:
+                    pts = deque(itertools.islice(pts, 1, len(pts)))
+                    pts.append(centre)
 
             mod_pt_x = (centre[0]-ref_col[0][0])*ref_col[4]
             
             mod_pt_y = (centre[1]-ref_col[0][1])*ref_col[5]
 
             mod_pts.append((mod_pt_x,mod_pt_y))
-    
-        for i in range(1, len(pts)):
-            if pts[i-1] is None or pts[i] is None:
-                continue
-            cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
+
+            mod_pt = mod_pts[-1]
+
+        if show_trck_hist:
+            for i in range(1, len(pts)):
+                if pts[i-1] is None or pts[i] is None:
+                    continue
+                cv2.line(image, pts[i-1], pts[i], (0,255,0), 1)
                              
-        cv2.imshow("Video Feed Tracking", image)
+        if show_window:
+            if show_arena_window:
+                cv2.imshow("Recorded Video Tracking", image[y1:y2, x1:x2])
+            else:
+                cv2.imshow("Recorded Video Tracking", image)
         cv2.waitKey(1)
 
         from OneStopTrack import _isRunning
     
     cap.release()
     cv2.destroyAllWindows()
-    return (tme, mod_pts)
+    return (pts_tme, mod_pts, run_tme)
