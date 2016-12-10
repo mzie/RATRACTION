@@ -1,1 +1,0 @@
-{'setup_list': ['a.pinMode(led, a.OUTPUT)'], 'pins': OrderedDict([('2', ['led', 'OUTPUT', 'DIGITAL'])]), 'loop_list': ['a.digitalWrite(led,a.HIGH)\nard_results["led"].append("HIGH")', 'sleep(1)', 'a.digitalWrite(led,a.LOW)\nard_results["led"].append("LOW")', 'sleep(1)'], 'naming_list': ['led = 2'], 'description': "Ballin'"}
