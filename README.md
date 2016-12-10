@@ -1,6 +1,6 @@
 # RATRACTION
 
-Open source, user modifiable system to track rodent movement and interact with input/output devices
+Inexpensive, User Modifiable Automated Video Tracking System for Rodent Behavioural Tests
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
