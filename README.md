@@ -1,5 +1,5 @@
 # RATRACTION
-Inexpensive, User Modifiable Automated Video Tracking System for Rodent Behavioural Tests
+## Inexpensive, User Modifiable Automated Video Tracking System for Rodent Behavioural Tests
 
 ---------------------------------------------------------------------------------
 
